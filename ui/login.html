@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>RAT Panel</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    html, body {
+      height: 100%;
+      font-family: sans-serif;
+    }
+    #background-video {
+      position: fixed;
+      right: 0;
+      bottom: 0;
+      min-width: 100%;
+      min-height: 100%;
+      object-fit: cover;
+      z-index: -2;
+    }
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: -1;
+    }
+    .welcome-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 10;
+    }
+    .welcome-screen h1 {
+      margin-bottom: 20px;
+    }
+    .welcome-screen button {
+      width: 100%;
+      margin-bottom: 0.8rem;
+      background-color: #3498db;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .form-container {
+      background: #f5f5f5;
+      padding: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      max-width: 400px;
+      margin: 0 auto;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 1;
+      display: none;
+    }
+    h2 { 
+      text-align: center;
+      margin-bottom: 1.5rem;
+      color: #333;
+    }
+    input, button {       
+      width: 100%;
+      display: block; 
+      margin: 0.5rem 0; 
+      padding: 0.6rem; 
+      font-size: 1rem;
+      border: 1px solid #ddd;
+      border-radius: 4px; }
+    button { margin: 0.5rem 0; padding: 0.4rem; font-size: 1rem; }
+    .error { 
+      color: red; 
+      margin-top: 1rem;
+      text-align: center;
+    }
+    .success {
+      color: green;
+      margin-top: 1rem;
+      text-align: center;
+    }
+    .tabs {
+      display: flex;
+      margin-bottom: 1.5rem;
+    }
+    .tab {
+      flex: 1;
+      text-align: center;
+      padding: 0.5rem;
+      background: #eee;
+      color: inherit;
+      text-decoration: none;
+    }
+    .tab.active {
+      background: #f5f5f5;
+      font-weight: bold;
+    }
+    .form-content {
+      display: none;
+    }
+    .form-content.active {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+
+  <video id="background-video" autoplay muted loop playsinline>
+    <source src="videoplayback.mp4" type="video/mp4">
+  </video>
+
+  <div class="overlay"></div>
+
+  <div class="welcome-screen" id="welcomeScreen">
+    <h1>Подтвердите, что вы не робот</h1>
+    <button onclick="startExperience()">Я не робот</button>
+  </div>
+
+  <div class="form-container" id="formContainer">
+    <h2>RAT Panel</h2>
+    <div class="tabs">
+      <div class="tab active" onclick="showTab(event, 'login')">Login</div>
+      <a class="tab" href="https://google.com">Register</a>
+    </div>
+    <div id="login-form" class="form-content active">
+      <input id="login-username" placeholder="Username" />
+      <input id="login-password" type="password" placeholder="Password" />
+      <button onclick="login()">Login</button>
+      <p id="login-error" class="error"></p>
+    </div>
+  </div>
+
+  <script>
+    const video = document.getElementById('background-video');
+    const welcome = document.getElementById('welcomeScreen');
+    const formContainer = document.getElementById('formContainer');
+    const videoSources = [
+      "video1.mp4",
+      "video2.mp4"
+    ];
+
+    function getRandomVideo() {
+      const randomIndex = Math.floor(Math.random() * videoSources.length);
+      return videoSources[randomIndex];
+    }
+
+    window.onload = function() {
+      const randomVideo = getRandomVideo();
+      video.innerHTML = `<source src="${randomVideo}" type="video/mp4">`;
+      video.load();
+    };
+
+    function startExperience() {
+      video.muted = false;
+      video.play().catch(() => {});
+      welcome.style.display = 'none';
+      formContainer.style.display = 'block';
+    }
+
+    function showTab(event, tabName) {
+      document.querySelectorAll('.form-content').forEach(el => el.classList.remove('active'));
+      document.getElementById(`${tabName}-form`).classList.add('active');
+      document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('login-error').textContent = '';
+    }
+
+    function login() {
+      const username = document.getElementById("login-username").value.trim();
+      const password = document.getElementById("login-password").value;
+      if (!username || !password) {
+        document.getElementById("login-error").textContent = "Please enter both fields";
+        return;
+      }
+      fetch("/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password })
+      }).then(res => {
+        if (res.ok) {
+          window.location.href = "/";
+        } else {
+          document.getElementById("login-error").textContent = "Invalid username or password";
+        }
+      }).catch(() => {
+        document.getElementById("login-error").textContent = "Connection error";
+      });
+    }
+
+    document.querySelectorAll('input').forEach(input => {
+      input.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+          if (document.getElementById('login-form').classList.contains('active')) {
+            login();
+          }
+        }
+      });
+    });
+  </script>
+</body>
+</html>
