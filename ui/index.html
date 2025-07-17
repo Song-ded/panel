@@ -612,7 +612,7 @@
             <h2 class="card-title"><i class="fas fa-file-alt"></i> Command Output</h2>
           </div>
           
-          <div class="output-console" id="output">
+          <div class="output-console" id="cmd-output">
 [System] Waiting for clients...
           </div>
         </div>
@@ -1054,7 +1054,7 @@
       if (msg.type === "screen") {
         document.getElementById("screenshot").src = "data:image/jpeg;base64," + msg.data;
       } else if (msg.type === "result") {
-        output.value += `[<- ${selectedClient}] ${msg.data}\n`;
+        output.value += `[<-] ${msg.data}\n`;
         output.scrollTop = output.scrollHeight;
       } else if (msg.type === "explorer") {
         renderExplorer(JSON.parse(msg.data));
