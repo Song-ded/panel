@@ -33,10 +33,10 @@ type Client struct {
 }
 
 type Build struct {
-	ID      string
-	Owner   string
-	Host    string
-	d time.Time
+    ID      string
+    Owner   string
+    Host    string
+    Created time.Time  // Добавляем поле Created
 }
 
 var (
@@ -80,6 +80,17 @@ func main() {
 	http.ListenAndServe(":"+port, r)
 }
 
+func BuildHandler(w http.ResponseWriter, r *http.Request) {
+    switch r.Method {
+    case http.MethodGet:
+        listBuildsHandler(w, r)
+    case http.MethodPost:
+        createBuildHandler(w, r)
+    default:
+        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+    }
+}
+
 func createBuildHandler(w http.ResponseWriter, r *http.Request) {
 	// Получаем текущего пользователя из сессии
 	cookie, err := r.Cookie("session")
@@ -104,8 +115,8 @@ func createBuildHandler(w http.ResponseWriter, r *http.Request) {
 	build := &Build{
 		ID:      buildID,
 		Owner:   owner,
-		Host:    "panel-agzz.onrender.com", // Фиксированный хост
-		Created: time.Now(),
+		Host:    "panel-agzz.onrender.com",
+		Created: time.Now(),  // Теперь поле существует
 	}
 
 	// Сохраняем билд
