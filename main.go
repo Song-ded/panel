@@ -19,8 +19,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-func BuildClient(serverHost string) error
-
 type Message struct {
 	Type string `json:"type"`
 	Data string `json:"data"`
@@ -122,7 +120,6 @@ func createBuildHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Вызываем builder для создания клиента
 	if err := builder.Build("panel-agzz.onrender.com", buildID); err != nil {
-		log.Printf("Build failed: %v", err)
 		http.Error(w, "build failed: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
