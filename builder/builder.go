@@ -411,8 +411,8 @@ func Build(serverHost string, buildID string) error {
 	cmd.Dir = buildDir
 	cmd.Env = append(os.Environ(), "CGO_ENABLED=1", "GOOS=windows", "GOARCH=amd64")
 	if err := cmd.Run(); err != nil {
-		return err
+		return "", fmt.Errorf("build failed: %v", err)  // Чистое сообщение об ошибке
 	}
 
-	return os.Remove(clientPath)
+	return filepath.Join(buildDir, "client.exe"), nil
 }
