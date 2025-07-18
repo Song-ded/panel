@@ -92,62 +92,72 @@ func BuildHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func createBuildHandler(w http.ResponseWriter, r *http.Request) {
-	// Получаем текущего пользователя из сессии
+	// Аутентификация
 	cookie, err := r.Cookie("session")
 	if err != nil {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
 		return
 	}
 
 	sessionsMu.RLock()
 	owner, ok := sessions[cookie.Value]
 	sessionsMu.RUnlock()
-
+	
 	if !ok {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		http.Error(w, `{"error":"invalid session"}`, http.StatusUnauthorized)
 		return
 	}
 
-	// Генерируем уникальный ID для билда
+	// Подготовка билда
 	buildID := uuid.New().String()
-
-	// Создаем запись о билде
 	build := &Build{
 		ID:      buildID,
 		Owner:   owner,
 		Host:    "panel-agzz.onrender.com",
-		Created: time.Now(),  // Теперь поле существует
+		Created: time.Now(),
 	}
 
-	// Сохраняем билд
+	// Сохранение информации о билде
 	buildsMu.Lock()
 	builds[buildID] = build
 	buildsMu.Unlock()
 
-	// Добавляем билд к пользователю
 	userBuildsMu.Lock()
 	userBuilds[owner] = append(userBuilds[owner], buildID)
 	userBuildsMu.Unlock()
 
-	// Вызываем builder для создания клиента
-	if err := builder.Build("panel-agzz.onrender.com", buildID); err != nil {
-		log.Printf("Build error: %v", err)
-		w.Header().Set("Content-Type", "application/json")
+	// Запуск сборки
+	log.Printf("[API] Starting build %s for user %s", buildID, owner)
+	exePath, err := builder.Build(build.Host, buildID)
+
+	w.Header().Set("Content-Type", "application/json")
+	if err != nil {
+		log.Printf("[API] Build %s failed: %v", buildID, err)
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(map[string]string{
-			"error": err.Error(),
+			"status": "error",
+			"error":  err.Error(),
+			"buildID": buildID,
 		})
 		return
 	}
 
-	exePath := filepath.Join("builds", buildID, "client.exe")
-	
-	w.Header().Set("Content-Type", "application/json")
+	// Успешный ответ
+	log.Printf("[API] Build %s completed successfully at %s", buildID, exePath)
 	json.NewEncoder(w).Encode(map[string]string{
-		"status": "success",
+		"status":  "success",
 		"buildID": buildID,
-		"path": exePath, // Добавляем путь в ответ
+		"path":    exePath,
+		"size":    fmt.Sprintf("%.1f MB", float64(getFileSize(exePath))/1024/1024),
 	})
+}
+
+func getFileSize(path string) int64 {
+	file, err := os.Stat(path)
+	if err != nil {
+		return 0
+	}
+	return file.Size()
 }
 
 func listBuildsHandler(w http.ResponseWriter, r *http.Request) {
