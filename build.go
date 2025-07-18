@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func main() {
+func BuildClient() {
 	serverHost := "https://panel-agzz.onrender.com"
 	code := strings.ReplaceAll(template, "YOUR_SERVER_IP", serverHost)
 
