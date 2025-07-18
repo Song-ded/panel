@@ -119,15 +119,23 @@ func createBuildHandler(w http.ResponseWriter, r *http.Request) {
 	userBuildsMu.Unlock()
 
 	// Вызываем builder для создания клиента
-	if err := builder.Build("panel-agzz.onrender.com", buildID); err != nil {
-		http.Error(w, "build failed: "+err.Error(), http.StatusInternalServerError)
-		return
+	exePath, err := builder.Build("panel-agzz.onrender.com", buildID)
+	if err != nil {
+		log.Printf("Build error: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+		    "error": err.Error(),
+	})
+	return
 	}
 
 	// Возвращаем ID билда
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{"id": buildID})
+	json.NewEncoder(w).Encode(map[string]string{
+		"status":  "success",
+		"exePath": exePath,
+	})
 }
 
 func listBuildsHandler(w http.ResponseWriter, r *http.Request) {
