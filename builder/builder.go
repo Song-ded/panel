@@ -394,7 +394,7 @@ func copyFile(src, dst string) error {
 	return err
 }`
 
-func BuildClient(serverHost string, buildID string) error {
+func Build(serverHost string, buildID string) error {
 	code := strings.ReplaceAll(template, "YOUR_SERVER_IP", serverHost)
 
 	buildDir := filepath.Join("builds", buildID)
