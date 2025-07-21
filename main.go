@@ -438,8 +438,10 @@ var (
 	sessions   = make(map[string]string)
 	sessionsMu sync.RWMutex
 	users      = map[string]string{
-		"admin": "admin123",
-		"user1": "pass1",
+		"root":     "rut",
+		"ierkit":   "ierkit123",
+		"rekserir": "rekserir123",
+		"улыбнись": "улыбнись123",
 	}
 	userToToken = make(map[string]string)
 	tokenMu     sync.RWMutex
