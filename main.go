@@ -430,10 +430,9 @@ type Client struct {
 }
 
 type Profile struct {
-	Username        string    `json:"username"`
-	SubscriptionEnd int       `json:"subscriptionEnd"`
-	Created         time.Time `json:"created"`
-	ImageURL        string    `json:"image"`
+	Username        string `json:"username"`
+	SubscriptionEnd int    `json:"subscriptionEnd"`
+	ImageURL        string `json:"image"`
 }
 
 var subscriptionOverrides = map[string]int{
@@ -474,50 +473,7 @@ var (
 	buildsMu sync.RWMutex
 )
 
-// --- ДЛЯ ДАТЫ СОЗДАНИЯ АККАУНТА ---
-var userCreatedMu sync.RWMutex
-var userCreated = make(map[string]time.Time)
-
-const userCreatedFile = "user_created.json"
-
-func loadUserCreated() {
-	userCreatedMu.Lock()
-	defer userCreatedMu.Unlock()
-	f, err := os.Open(userCreatedFile)
-	if err != nil {
-		return
-	}
-	defer f.Close()
-	var raw map[string]string
-	if err := json.NewDecoder(f).Decode(&raw); err != nil {
-		return
-	}
-	for k, v := range raw {
-		t, err := time.Parse(time.RFC3339, v)
-		if err == nil {
-			userCreated[k] = t
-		}
-	}
-}
-
-func saveUserCreated() {
-	userCreatedMu.RLock()
-	defer userCreatedMu.RUnlock()
-	out := make(map[string]string)
-	for k, v := range userCreated {
-		out[k] = v.Format(time.RFC3339)
-	}
-	f, err := os.Create(userCreatedFile)
-	if err != nil {
-		log.Println("saveUserCreated error:", err)
-		return
-	}
-	defer f.Close()
-	_ = json.NewEncoder(f).Encode(out)
-}
-
 func main() {
-	loadUserCreated()
 	_ = os.MkdirAll("stealer", 0755)
 
 	r := mux.NewRouter()
@@ -601,19 +557,9 @@ func profileHandler(w http.ResponseWriter, r *http.Request) {
 		daysLeft = 0
 	}
 
-	// --- Получение даты создания ---
-	userCreatedMu.RLock()
-	created := userCreated[username]
-	userCreatedMu.RUnlock()
-	if created.IsZero() {
-		created = time.Now().Add(-90 * 24 * time.Hour) // fallback, если нет даты
-	}
-	// --- конец блока ---
-
 	profile := Profile{
 		Username:        username,
 		SubscriptionEnd: daysLeft,
-		Created:         created,
 		ImageURL:        imageURL,
 	}
 
@@ -924,14 +870,6 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	// --- Запись даты создания при первой авторизации ---
-	userCreatedMu.Lock()
-	if _, ok := userCreated[creds.Username]; !ok {
-		userCreated[creds.Username] = time.Now().UTC()
-		saveUserCreated()
-	}
-	userCreatedMu.Unlock()
-	// --- конец блока ---
 	sid := uuid.New().String()
 	sessionsMu.Lock()
 	sessions[sid] = creds.Username
