@@ -1051,17 +1051,17 @@
         <div id="peripheryTab" class="tab-content">
           <div class="card">
             <div class="card-header">
-              <h2 class="card-title"><i class="fas fa-headphones"></i> Периферия</h2>
+              <h2 class="card-title"><i class="fas fa-headphones"></i> Periphery</h2>
             </div>
             <div class="input-group">
-              <label for="audioDeviceSelect">Аудиоустройство:</label>
+              <label for="audioDeviceSelect">Audio:</label>
               <select id="audioDeviceSelect" class="input-field"></select>
             </div>
             <div class="action-buttons">
-              <button class="btn btn-primary" onclick="startListenAudio()">Слушать</button>
-              <button class="btn btn-danger" onclick="stopListenAudio()">Стоп</button>
+              <button class="btn btn-primary" onclick="startListenAudio()">Listen</button>
+              <button class="btn btn-danger" onclick="stopListenAudio()">Stop</button>
             </div>
-            <div class="output-console" id="audioStatus">Выберите устройство и нажмите "Слушать"</div>
+            <div class="output-console" id="audioStatus">Select the device and tap "Listen"</div>
           </div>
         </div>
       </div>
@@ -1080,7 +1080,7 @@
     let rightClickedPath = "";
     let startTime = Date.now();
     
-    const output = document.getElementById("cmd-output"); // Changed from output to cmd-output
+    const output = document.getElementById("cmd-output");
     const explorer = document.getElementById("explorer");
     const downloadBtn = document.getElementById("downloadBtn");
     
