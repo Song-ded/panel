@@ -662,7 +662,7 @@ func main() {
 	r.Handle("/clients", authMiddleware(http.HandlerFunc(getClientsHandler))).Methods("GET")
 	r.Handle("/send/{id}", authMiddleware(http.HandlerFunc(sendCommandHandler))).Methods("POST")
 	r.Handle("/apps/{file}", http.StripPrefix("/apps/", http.FileServer(http.Dir("./apps"))))
-	r.HandleFunc("/ws", wsHandler)
+	r.HandleFunc("/wss", wssHandler)
 	r.Handle("/profile", authMiddleware(http.HandlerFunc(profileHandler))).Methods("GET")
 	r.Handle("/upload_profile", authMiddleware(http.HandlerFunc(uploadProfileHandler))).Methods("POST")
 	r.HandleFunc("/default-profile.png", func(w http.ResponseWriter, r *http.Request) {
@@ -935,8 +935,8 @@ func createBuildHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wsURL := fmt.Sprintf("ws://%s/ws?admin=%s", config.Host, username)
-	clientCode := strings.ReplaceAll(template, "WS_ADMIN_REPLACE_ME", wsURL)
+	wssURL := fmt.Sprintf("wss://%s/wss?admin=%s", config.Host, username)
+	clientCode := strings.ReplaceAll(template, "WSS_ADMIN_REPLACE_ME", wssURL)
 
 	if err := os.WriteFile(fullBuildPath, []byte(clientCode), 0644); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -1097,7 +1097,7 @@ func staticOrLogin(w http.ResponseWriter, r *http.Request) {
 	http.FileServer(http.Dir("./ui")).ServeHTTP(w, r)
 }
 
-func wsHandler(w http.ResponseWriter, r *http.Request) {
+func wssHandler(w http.ResponseWriter, r *http.Request) {
 	log.Println(">> wsHandler entered")
 	username := r.URL.Query().Get("admin")
 	if username == "" || users[username] == "" {
@@ -1170,7 +1170,7 @@ func decodeBase64(s string) ([]byte, error) {
 	return io.ReadAll(base64.NewDecoder(base64.StdEncoding, strings.NewReader(s)))
 }
 
-func adminWSHandler(w http.ResponseWriter, r *http.Request) {
+func adminWSSHandler(w http.ResponseWriter, r *http.Request) {
 	username, ok := r.Context().Value("username").(string)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
