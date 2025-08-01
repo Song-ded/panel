@@ -1261,12 +1261,13 @@
       })
       .then(response => response.json())
       .then(data => {
-        if (data.message) {
-          status.textContent = data.message;
+        if (data.id) {
+          status.textContent = "Build completed successfully! Downloading...";
 
+          // Скачиваем файл
           const a = document.createElement("a");
-          a.href = "/download_build";
-          a.download = "client.exe";
+          a.href = `/download_build?id=${data.id}`;
+          a.download = `client_${data.id}.exe`;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
@@ -1306,19 +1307,19 @@
           document.getElementById('profileImage').src = imgUrl;
           document.getElementById('profileDisplayImage').src = imgUrl;
           
-          if (data.created) {
-            document.getElementById('profileCreated').textContent = 
-              `Аккаунт создан: ${new Date(data.created).toLocaleDateString()}`;
-          } else {
-            document.getElementById('profileCreated').textContent = '';
-          }
+          // if (data.created) {
+          //   document.getElementById('profileCreated').textContent = 
+          //     `Аккаунт создан: ${new Date(data.created).toLocaleDateString()}`;
+          // } else {
+          //   document.getElementById('profileCreated').textContent = '';
+          // }
         })
         .catch(err => {
           const errorMsg = 'Ошибка загрузки профиля: ' + (err && err.message ? err.message : err);
           document.getElementById('profileUsername').textContent = errorMsg;
           document.getElementById('profileUsernameDisplay').textContent = errorMsg;
           document.getElementById('profileSubscription').textContent = errorMsg;
-          document.getElementById('profileCreated').textContent = errorMsg;
+          // document.getElementById('profileCreated').textContent = errorMsg;
         });
     }
 
