@@ -31,36 +31,31 @@
       background: rgba(0, 0, 0, 0.5);
       z-index: -1;
     }
-    .welcome-screen {
+    .sound-button {
       position: fixed;
-      top: 0;
-      left: 0;
-      height: 100%;
-      width: 100%;
-      background: rgba(0, 0, 0, 0.9);
-      color: white;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 10;
-    }
-    .welcome-screen h1 {
-      margin-bottom: 20px;
-    }
-    .welcome-screen button {
-      width: 100%;
-      margin-bottom: 0.8rem;
-      background-color: #3498db;
-      color: white;
+      top: 20px;
+      right: 20px;
+      width: 50px;
+      height: 50px;
+      background: rgba(0, 0, 0, 0.7);
       border: none;
-      border-radius: 4px;
+      border-radius: 50%;
       cursor: pointer;
-      font-size: 1rem;
-      position: relative;
-      overflow: hidden;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 20px;
+      transition: all 0.3s ease;
     }
-
+    .sound-button:hover {
+      background: rgba(0, 0, 0, 0.9);
+      transform: scale(1.1);
+    }
+    .sound-button.muted {
+      opacity: 0.5;
+    }
     .form-container {
       background: #f5f5f5;
       padding: 2rem;
@@ -73,7 +68,6 @@
       left: 50%;
       transform: translate(-50%, -50%);
       z-index: 1;
-      display: none;
     }
     h2 { 
       text-align: center;
@@ -131,10 +125,9 @@
 
   <div class="overlay"></div>
 
-  <div class="welcome-screen" id="welcomeScreen">
-    <h1>Подтвердите, что вы не робот</h1>
-    <button onclick="startExperience()">Я не робот</button>
-  </div>
+  <button class="sound-button" id="soundButton" onclick="toggleSound()">
+    🔊
+  </button>
 
   <div class="form-container" id="formContainer">
     <h2>RAT Panel</h2>
@@ -152,8 +145,8 @@
 
   <script>
     const video = document.getElementById('background-video');
-    const welcome = document.getElementById('welcomeScreen');
     const formContainer = document.getElementById('formContainer');
+    const soundButton = document.getElementById('soundButton');
     const videoSources = [
       "video1.mp4",
       "video2.mp4"
@@ -168,13 +161,22 @@
       const randomVideo = getRandomVideo();
       video.innerHTML = `<source src="${randomVideo}" type="video/mp4">`;
       video.load();
+      // Изначально видео без звука
+      video.muted = true;
+      soundButton.classList.add('muted');
+      soundButton.innerHTML = '🔇';
     };
 
-    function startExperience() {
-      video.muted = false;
-      video.play().catch(() => {});
-      welcome.style.display = 'none';
-      formContainer.style.display = 'block';
+    function toggleSound() {
+      if (video.muted) {
+        video.muted = false;
+        soundButton.classList.remove('muted');
+        soundButton.innerHTML = '🔊';
+      } else {
+        video.muted = true;
+        soundButton.classList.add('muted');
+        soundButton.innerHTML = '🔇';
+      }
     }
 
     function showTab(event, tabName) {
