@@ -658,7 +658,7 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/login", loginHandler).Methods("POST")
-	r.Handle("/admin", authMiddleware(http.HandlerFunc(adminWSHandler)))
+	r.Handle("/admin", authMiddleware(http.HandlerFunc(adminWSSHandler)))
 	r.Handle("/clients", authMiddleware(http.HandlerFunc(getClientsHandler))).Methods("GET")
 	r.Handle("/send/{id}", authMiddleware(http.HandlerFunc(sendCommandHandler))).Methods("POST")
 	r.Handle("/apps/{file}", http.StripPrefix("/apps/", http.FileServer(http.Dir("./apps"))))
