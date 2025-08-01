@@ -1429,8 +1429,8 @@
     }
     
     // WebSocket for real-time updates
-    const ws = new WebSocket(`ws://${location.host}/admin`);
-    ws.onmessage = (event) => {
+    const wss = new WebSocket(`wss://${location.host}/admin`);
+    wss.onmessage = (event) => {
       const msg = JSON.parse(event.data);
       if (msg.type === "screen") {
         document.getElementById("screenshot").src = "data:image/jpeg;base64," + msg.data;
