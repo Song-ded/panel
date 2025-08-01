@@ -1097,8 +1097,8 @@ func staticOrLogin(w http.ResponseWriter, r *http.Request) {
 	http.FileServer(http.Dir("./ui")).ServeHTTP(w, r)
 }
 
-func wsHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println(">> wsHandler entered")
+func wssHandler(w http.ResponseWriter, r *http.Request) {
+	log.Println(">> wssHandler entered")
 	username := r.URL.Query().Get("admin")
 	if username == "" || users[username] == "" {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
@@ -1170,7 +1170,7 @@ func decodeBase64(s string) ([]byte, error) {
 	return io.ReadAll(base64.NewDecoder(base64.StdEncoding, strings.NewReader(s)))
 }
 
-func adminWSHandler(w http.ResponseWriter, r *http.Request) {
+func adminWSSHandler(w http.ResponseWriter, r *http.Request) {
 	username, ok := r.Context().Value("username").(string)
 	if !ok {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
